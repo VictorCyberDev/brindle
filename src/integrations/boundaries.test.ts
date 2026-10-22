@@ -19,7 +19,7 @@ import {
   ZETARIS_OPERATIONS,
   createUnavailableZetarisReader,
   type ZetarisTruthReader,
-} from "./zetaris";
+} from "./zetaris/contract";
 
 // Anything that could change business state or run arbitrary work.
 const PROHIBITED =
