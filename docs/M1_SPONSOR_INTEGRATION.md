@@ -24,7 +24,18 @@ Content-Type: application/json
 { "queryId": "<fresh UUID>", "sql": "<fixed read-only SELECT>", "source": "SqlEditor", "limit": <1..100> }
 ```
 
-The query results are read from the response's **`data`**, which must be an array of records (column → value). Any other shape is rejected loudly.
+The query results are read from the response's **`data`**. The hackathon smoke example reads `data[0][0]`, so the endpoint may return **positional rows** as well as object rows, and Brindle does not assume which a given environment returns. The shape is classified explicitly (`src/integrations/zetaris/response-shape.ts`):
+
+| Family                        | Example                                                  | Behaviour                                                                                                                                                                             |
+| ----------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OBJECT_ROWS`                 | `data: [{"supplier_id": "SUP-ATLAS", ...}]`              | Normalized.                                                                                                                                                                           |
+| `EMPTY`                       | `data: []`                                               | Zero rows (the caller decides whether that is an error).                                                                                                                              |
+| `POSITIONAL_ROWS`             | `data: [["SUP-ATLAS", ...]]`, `data: [[1]]`              | Recognized as a legitimate family, but refused with `ZetarisResponseShapeUnsupportedError` unless reliable column metadata identifies the columns. Column order is **never guessed**. |
+| `MIXED_ROWS` / `UNRECOGNIZED` | objects and arrays mixed, `data` missing or not an array | Refused with the same error.                                                                                                                                                          |
+
+**Column metadata:** no metadata field for `/sql-editor/sqls/run` is documented in any source available to this repository (the generic Zetaris OpenAPI spec does not describe this endpoint), so none is assumed. `resolveColumnNames` is the single choke point where an evidenced metadata shape (and its test) must be added once a live response shows one. Until then positional rows fail loudly.
+
+`ZetarisResponseShapeUnsupportedError` carries only safe shape facts: family, JS type of `data`, row count, first-row width and top-level key _names_; never row values, the body or credentials. `npm run live:zetaris` prints this classification for every call, so the first live run immediately shows what the real environment returns.
 
 - **Superseded:** the earlier `/query/sql/start|page|close` cursor API from Zetaris's generic OpenAPI spec was **removed**. It is not the hackathon path and no code path uses it.
 - **Read-only by construction:** SQL is only built from one fixed template, `SELECT * FROM <schema>.<table> WHERE <key column> = '<id>'` over three tables. Identifiers are regex-validated, a guard rejects anything that is not a single plain SELECT (no `;`, comments, or write verbs), and no adapter method accepts caller SQL. `limit` is a constant bound (100); a result that reaches it is an error.
@@ -66,11 +77,11 @@ Configuration (all three, or none): `METERLESS_BASE_URL`, `METERLESS_RUNTIME_TOK
 
 Headers on **every** Meterless Runtime request: `Authorization: Bearer <runtime token>`, `meterless-app: brindle`, `meterless-scope: user`, `Content-Type: application/json`, `Accept: application/json`. `METERLESS_BASE_URL` is the runtime origin; a trailing `/v1` is tolerated and normalized. No `tools`, `functions` or `tool_choice` is ever sent; the reply must be JSON that passes a strict Zod schema; provider "reasoning" side-channels are discarded.
 
-**Competition LIVE mode requires Meterless.** `BRINDLE_RUNTIME_MODE=live` refuses to start unless Meterless is fully configured. Direct NVIDIA does not silently stand in for it: it is used only when `NEMOTRON_PROVIDER=nvidia` is set explicitly.
+**Competition LIVE mode requires Meterless, with no direct-NVIDIA bypass.** The locked stack is real Zetaris -> Brindle -> real Meterless Nightshift -> NVIDIA provider inside Nightshift -> Nemotron. `BRINDLE_RUNTIME_MODE=live` requires Zetaris, `DATABASE_URL`, fully configured Meterless **and** reasoning provider `meterless`. Setting `NEMOTRON_PROVIDER=nvidia` in LIVE mode (even with valid NVIDIA credentials, and even with Meterless also configured) fails configuration with: _"Competition LIVE mode requires Meterless Nightshift as the primary reasoning runtime. Direct NVIDIA is secondary development/probe only."_ The invariant is enforced twice: in `src/config/env.ts` and, defensively, in `src/demo/runtime.ts` (which refuses a hand-built LIVE config that routes through NVIDIA). NVIDIA credentials present alongside Meterless are ignored: the provider stays `meterless`.
 
 ### Direct NVIDIA: secondary only
 
-`NEMOTRON_PROVIDER=nvidia` with `NVIDIA_API_KEY`, `NEMOTRON_MODEL_ID` and optionally `NVIDIA_BASE_URL` (default `https://integrate.api.nvidia.com/v1`) reaches NVIDIA's OpenAI-compatible API directly. The selected model **must be Nemotron-family** (configuration fails otherwise). **No Meterless headers are ever sent to NVIDIA** (tested). It is a development/verification fallback, not the competition path.
+`NEMOTRON_PROVIDER=nvidia` with `NVIDIA_API_KEY`, `NEMOTRON_MODEL_ID` and optionally `NVIDIA_BASE_URL` (default `https://integrate.api.nvidia.com/v1`) reaches NVIDIA's OpenAI-compatible API directly. The selected model **must be Nemotron-family** (configuration fails otherwise). **No Meterless headers are ever sent to NVIDIA** (tested). It is for local development, explicit standalone provider probing (`BRINDLE_RUNTIME_MODE=local NEMOTRON_PROVIDER=nvidia npm run live:nemotron`) and protocol tests. It can **never** satisfy competition LIVE mode.
 
 ## Runtime route vs underlying model
 

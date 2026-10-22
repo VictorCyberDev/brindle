@@ -100,6 +100,7 @@ describe("config validation", () => {
   it("supports the direct NVIDIA route and requires its key", () => {
     const nvidia = {
       ...liveEnv,
+      BRINDLE_RUNTIME_MODE: "local",
       NEMOTRON_PROVIDER: "nvidia",
       NVIDIA_API_KEY: "nv-secret-789",
       NEMOTRON_MODEL_ID: "nvidia/nemotron-3-super",

@@ -1,6 +1,6 @@
 # Milestones
 
-Only **M0** is implemented. Later milestones are documented scope, not code.
+**M0** is complete and merged. **M1** is code complete on `m1-successful-agent-world` (draft PR #2; LIVE sponsor acceptance pending). **M2-M6** are documented scope, not code.
 
 | Milestone | Name                       | Scope                                                                                                                                                                                                                                                                                                                                            |
 | --------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

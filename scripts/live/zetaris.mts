@@ -64,10 +64,23 @@ try {
   );
 }
 
-console.log("\nHTTP calls (secret-free):");
+console.log("\nHTTP calls and response-shape classification (secret-free; no row values):");
 for (const c of source.calls) {
   console.log(
     `  POST /sql-editor/sqls/run HTTP ${c.httpStatus}  X-Request-ID ${c.requestId}  queryId ${c.queryId}  server-id ${c.serverRequestId ?? "(none exposed)"}`,
+  );
+  const sh = c.responseShape;
+  console.log(
+    sh
+      ? `    shape: family=${sh.family} data=${sh.dataType} rows=${sh.rowCount ?? "n/a"} first-row-width=${sh.firstRowWidth ?? "n/a"} top-level-keys=[${sh.topLevelKeys.join(",")}] column-metadata=${sh.columnMetadata}`
+      : "    shape: (no body read)",
+  );
+}
+const families = new Set(source.calls.map((c) => c.responseShape?.family));
+if (families.has("POSITIONAL_ROWS")) {
+  console.log(
+    "\nThis Zetaris environment returns POSITIONAL rows. Brindle cannot map them without documented column metadata:\n" +
+      "report the top-level keys above so the metadata field can be implemented in src/integrations/zetaris/response-shape.ts.",
   );
 }
 console.log(failed ? "\nRESULT: FAILED" : "\nRESULT: OK (live Zetaris read succeeded)");

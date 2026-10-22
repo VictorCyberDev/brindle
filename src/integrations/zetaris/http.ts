@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import { ZetarisRequestError } from "./errors";
 import type { TruthRowSource } from "./reader";
+import { classifyZetarisResponse, extractRows, type ZetarisResponseShape } from "./response-shape";
 import type { RawRow, TruthTable } from "./rows";
 import { TRUTH_TABLES } from "./rows";
 
@@ -16,7 +17,8 @@ import { TRUTH_TABLES } from "./rows";
  *   Content-Type: application/json
  *   {"queryId": "<fresh uuid>", "sql": "<fixed read-only SELECT>", "source": "SqlEditor", "limit": <int>}
  *
- * The query results are exposed through the response's `data`.
+ * The query results are exposed through the response's `data`: object rows, or positional rows
+ * (see response-shape.ts for how each family is classified and when it is refused).
  *
  * READ-ONLY by construction: SQL is only ever produced from the fixed
  * template below, there is no method that accepts caller-supplied SQL, and a
@@ -46,10 +48,9 @@ export interface ZetarisCallRecord {
   httpStatus: number;
   /** Response-side correlation header, if Zetaris returns one. */
   serverRequestId: string | null;
+  /** Secret-free classification of what the endpoint returned (null until a body was read). */
+  responseShape: ZetarisResponseShape | null;
 }
-
-/** Documented shape: results live in `data`. Records must be objects (column -> value). */
-const runResponseSchema = z.object({ data: z.array(z.record(z.string(), z.unknown())) });
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
 const KEY = /^[A-Za-z0-9_-]{1,64}$/;
@@ -73,16 +74,7 @@ export function buildSelect(schema: string, table: TruthTable, key: string): str
   return sql;
 }
 
-export class ZetarisRequestError extends Error {
-  override name = "ZetarisRequestError";
-  constructor(
-    message: string,
-    public readonly httpStatus: number | null,
-    public readonly requestId: string,
-  ) {
-    super(message);
-  }
-}
+export { ZetarisRequestError };
 
 export class ZetarisSqlRowSource implements TruthRowSource {
   /** Secret-free log of every HTTP call made, for live probes and evidence. */
@@ -118,13 +110,15 @@ export class ZetarisSqlRowSource implements TruthRowSource {
         requestId,
       );
     }
-    this.calls.push({
+    const record: ZetarisCallRecord = {
       requestId,
       queryId,
       operation: "run",
       httpStatus: res.status,
       serverRequestId: res.headers.get("x-request-id"),
-    });
+      responseShape: null,
+    };
+    this.calls.push(record);
     if (!res.ok) {
       // Body is not echoed: it may contain tenant details. Status + our request id suffice for support.
       throw new ZetarisRequestError(
@@ -139,21 +133,15 @@ export class ZetarisSqlRowSource implements TruthRowSource {
     } catch {
       throw new ZetarisRequestError("Zetaris response was not JSON", res.status, requestId);
     }
-    const parsed = runResponseSchema.safeParse(body);
-    if (!parsed.success) {
-      throw new ZetarisRequestError(
-        "Zetaris response did not expose an array of records in `data`",
-        res.status,
-        requestId,
-      );
-    }
-    if (parsed.data.data.length >= ZETARIS_ROW_LIMIT) {
+    record.responseShape = classifyZetarisResponse(body);
+    const { rows } = extractRows(body, { httpStatus: res.status, requestId });
+    if (rows.length >= ZETARIS_ROW_LIMIT) {
       throw new ZetarisRequestError(
         "Zetaris result reached the row limit; truth tables must be tiny",
         res.status,
         requestId,
       );
     }
-    return parsed.data.data as RawRow[];
+    return rows;
   }
 }

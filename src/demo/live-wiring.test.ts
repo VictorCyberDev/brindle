@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadConfig, providerModeOf, summarizeConfig } from "../config/env";
+import { ConfigError, loadConfig, providerModeOf, summarizeConfig } from "../config/env";
 import { createEphemeralDb } from "../db/client";
 import { OpenAiCompatibleNemotronReasoner } from "../integrations/nemotron/openai-compatible";
 import { ZetarisSqlRowSource } from "../integrations/zetaris/http";
@@ -193,9 +193,10 @@ describe("mock vs live separation", () => {
     ).rejects.toBeInstanceOf(LiveNotConfiguredError);
   });
 
-  it("direct NVIDIA is secondary: explicit opt-in, Nemotron-family model only", () => {
+  it("direct NVIDIA is secondary: explicit opt-in, Nemotron-family only, development/probe use (local mode)", () => {
     const direct = {
       ...liveEnv,
+      BRINDLE_RUNTIME_MODE: "local",
       METERLESS_BASE_URL: "",
       METERLESS_RUNTIME_TOKEN: "",
       METERLESS_MODEL: "",
@@ -245,5 +246,83 @@ describe("no sponsor secret is exposed", () => {
       expect(String((error as Error).message)).not.toContain(ZETARIS_KEY);
       expect(String((error as Error).message)).not.toContain(SECRET);
     }
+  });
+});
+
+describe("competition LIVE can never bypass Meterless (exact bypass conditions)", () => {
+  const NO_METERLESS = { METERLESS_BASE_URL: "", METERLESS_RUNTIME_TOKEN: "", METERLESS_MODEL: "" };
+  const NVIDIA = { NVIDIA_API_KEY: "nv-secret", NEMOTRON_MODEL_ID: "nvidia/nemotron-3-super" };
+
+  it("LIVE + valid Zetaris + valid DB + valid direct NVIDIA + NO Meterless MUST FAIL", () => {
+    const bypass = { ...liveEnv, ...NO_METERLESS, ...NVIDIA, NEMOTRON_PROVIDER: "nvidia" };
+    // Every other LIVE prerequisite is valid: only the Meterless requirement can be the cause.
+    expect(() =>
+      loadConfig({
+        ...bypass,
+        NEMOTRON_PROVIDER: "nvidia",
+        ...{
+          METERLESS_BASE_URL: "http://localhost:9000",
+          METERLESS_RUNTIME_TOKEN: "t",
+          METERLESS_MODEL: "meterless/auto",
+        },
+        BRINDLE_RUNTIME_MODE: "local",
+      }),
+    ).not.toThrow();
+    expect(() => loadConfig(bypass)).toThrow(
+      /Competition LIVE mode requires Meterless Nightshift as the primary reasoning runtime\. Direct NVIDIA is secondary development\/probe only\./,
+    );
+    expect(() => loadConfig(bypass)).toThrow(ConfigError);
+    // Leaving the provider unset does not let NVIDIA credentials stand in either.
+    expect(() => loadConfig({ ...liveEnv, ...NO_METERLESS, ...NVIDIA })).toThrow(
+      /Meterless Nightshift is the primary runtime/,
+    );
+  });
+
+  it("LIVE + valid Meterless + NVIDIA credentials present still uses Meterless", async () => {
+    const config = loadConfig({ ...liveEnv, ...NVIDIA });
+    expect(config.nemotron).toMatchObject({
+      status: "configured",
+      provider: "meterless",
+      runtimeRoute: "meterless/auto",
+    });
+    const runtime = await createWorldRuntime(config);
+    try {
+      expect(runtime.deps.reasoningProvider).toBe("meterless");
+      expect(runtime.deps.configuredModelId).toBe("route:meterless/auto");
+      expect(runtime.deps.mode).toBe("LIVE");
+    } finally {
+      await runtime.handle.close();
+    }
+  });
+
+  it("LIVE with Meterless configured but NEMOTRON_PROVIDER=nvidia explicitly is also refused", () => {
+    expect(() => loadConfig({ ...liveEnv, ...NVIDIA, NEMOTRON_PROVIDER: "nvidia" })).toThrow(
+      /Competition LIVE mode requires Meterless Nightshift/,
+    );
+  });
+
+  it("the runtime refuses a hand-built LIVE config that routes through direct NVIDIA (second layer)", async () => {
+    const base = loadConfig({ ...liveEnv, BRINDLE_RUNTIME_MODE: "local", ...NO_METERLESS });
+    const bypass = {
+      ...base,
+      runtimeMode: "live" as const,
+      databaseUrl: "postgres://u:p@db.example.test/db",
+      zetaris: loadConfig(liveEnv).zetaris,
+      meterless: { status: "unconfigured" as const },
+      nemotron: {
+        status: "configured" as const,
+        provider: "nvidia" as const,
+        baseUrl: "https://integrate.api.nvidia.com/v1",
+        apiKey: "nv-secret",
+        modelId: "nvidia/nemotron-3-super",
+      },
+    };
+    await expect(createWorldRuntime(bypass)).rejects.toThrow(LiveNotConfiguredError);
+    await expect(createWorldRuntime(bypass)).rejects.toThrow(
+      /Competition LIVE mode requires Meterless Nightshift/,
+    );
+    // Even with Meterless present, a non-meterless reasoning provider is refused.
+    const mixed = { ...bypass, meterless: loadConfig(liveEnv).meterless };
+    await expect(createWorldRuntime(mixed)).rejects.toThrow(LiveNotConfiguredError);
   });
 });

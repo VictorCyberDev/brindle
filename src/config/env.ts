@@ -118,6 +118,10 @@ export class ConfigError extends Error {
   }
 }
 
+/** Message used by every layer that enforces the competition LIVE invariant. */
+export const COMPETITION_LIVE_REQUIRES_METERLESS =
+  "Competition LIVE mode requires Meterless Nightshift as the primary reasoning runtime. Direct NVIDIA is secondary development/probe only.";
+
 export const isNemotronFamily = (modelId: string) => /nemotron/i.test(modelId);
 
 const stripTrailingSlashes = (url: string) => url.replace(/\/+$/, "");
@@ -193,8 +197,9 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>>): A
       );
     }
   } else {
+    if (live) issues.push(COMPETITION_LIVE_REQUIRES_METERLESS);
     const anyNvidia = e.NVIDIA_API_KEY || e.NEMOTRON_MODEL_ID;
-    if (live || anyNvidia) {
+    if (anyNvidia) {
       if (!e.NVIDIA_API_KEY) issues.push("NEMOTRON_PROVIDER=nvidia requires NVIDIA_API_KEY");
       if (!e.NEMOTRON_MODEL_ID) issues.push("NEMOTRON_PROVIDER=nvidia requires NEMOTRON_MODEL_ID");
       else if (!isNemotronFamily(e.NEMOTRON_MODEL_ID)) {
@@ -210,6 +215,12 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>>): A
         modelId: e.NEMOTRON_MODEL_ID,
       };
     }
+  }
+
+  if (live && meterless.status !== "configured" && provider === "nvidia") {
+    issues.push(
+      "BRINDLE_RUNTIME_MODE=live requires METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN and METERLESS_MODEL",
+    );
   }
 
   if (live && !e.DATABASE_URL)

@@ -1,5 +1,5 @@
 import type { AppConfig } from "../config/env";
-import { providerModeOf } from "../config/env";
+import { COMPETITION_LIVE_REQUIRES_METERLESS, providerModeOf } from "../config/env";
 import { openDb, type DbHandle } from "../db/client";
 import {
   OpenAiCompatibleNemotronReasoner,
@@ -33,11 +33,22 @@ export async function createWorldRuntime(config: AppConfig): Promise<WorldRuntim
   const now = () => new Date();
 
   if (providerModeOf(config) === "LIVE") {
-    if (config.zetaris.status !== "configured" || config.nemotron.status !== "configured") {
+    // Defence in depth (config/env.ts enforces the same invariant): the competition LIVE stack is
+    // real Zetaris -> Brindle -> real Meterless Nightshift -> NVIDIA inside Nightshift -> Nemotron.
+    // Direct NVIDIA can never satisfy it, even if a hand-built config says so.
+    if (config.zetaris.status !== "configured") {
       await handle.close();
       throw new LiveNotConfiguredError(
-        "LIVE mode requires configured Zetaris and a configured reasoning runtime (Meterless Nightshift is primary); refusing to fall back to mocks.",
+        "LIVE mode requires configured Zetaris; refusing to fall back to mocks.",
       );
+    }
+    if (
+      config.meterless.status !== "configured" ||
+      config.nemotron.status !== "configured" ||
+      config.nemotron.provider !== "meterless"
+    ) {
+      await handle.close();
+      throw new LiveNotConfiguredError(COMPETITION_LIVE_REQUIRES_METERLESS);
     }
     const source = new ZetarisSqlRowSource({
       restUrl: config.zetaris.restUrl,
@@ -46,15 +57,12 @@ export async function createWorldRuntime(config: AppConfig): Promise<WorldRuntim
       schema: config.zetaris.schema,
     });
     const n = config.nemotron;
-    const route: ReasoningRoute =
-      n.provider === "meterless"
-        ? {
-            provider: "meterless",
-            baseUrl: n.baseUrl,
-            runtimeToken: n.runtimeToken,
-            runtimeRoute: n.runtimeRoute,
-          }
-        : { provider: "nvidia", baseUrl: n.baseUrl, apiKey: n.apiKey, modelId: n.modelId };
+    const route: ReasoningRoute = {
+      provider: "meterless",
+      baseUrl: n.baseUrl,
+      runtimeToken: n.runtimeToken,
+      runtimeRoute: n.runtimeRoute,
+    };
     const reasoner = new OpenAiCompatibleNemotronReasoner({ route });
     return {
       handle,
@@ -70,8 +78,8 @@ export async function createWorldRuntime(config: AppConfig): Promise<WorldRuntim
         reasoner,
         mode: "LIVE",
         truthSourceId: "zetaris",
-        reasoningProvider: n.provider,
-        configuredModelId: n.provider === "meterless" ? `route:${n.runtimeRoute}` : n.modelId,
+        reasoningProvider: "meterless",
+        configuredModelId: `route:${n.runtimeRoute}`,
       },
     };
   }

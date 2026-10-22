@@ -7,7 +7,9 @@ import {
   ZetarisRequestError,
   ZetarisSqlRowSource,
 } from "./http";
+import { ZetarisResponseShapeUnsupportedError } from "./errors";
 import { RowBackedTruthReader, UnsupportedTruthQueryError } from "./reader";
+import { classifyZetarisResponse, resolveColumnNames } from "./response-shape";
 
 /*
  * PROTOCOL TEST DOUBLE. Imitates the hackathon Participant Setup Guide
@@ -184,5 +186,107 @@ describe("Zetaris canonical hackathon contract", () => {
     expect(String((e2 as Error).message)).not.toContain(KEY);
     expect(JSON.stringify(rejecting.calls)).not.toContain(KEY);
     expect(JSON.stringify(e2)).not.toContain(KEY);
+  });
+});
+
+describe("Zetaris response families (data may be object rows or positional rows)", () => {
+  const run = (body: unknown) =>
+    source((async () => json(body)) as typeof fetch).selectRows("supplier_master", "SUP-ATLAS");
+
+  it("1. object-row `data` still works and is classified OBJECT_ROWS", async () => {
+    expect(await run({ data: [{ supplier_id: "SUP-ATLAS" }] })).toEqual([
+      { supplier_id: "SUP-ATLAS" },
+    ]);
+    const s = source((async () => json({ data: [{ a: 1 }, { a: 2 }] })) as typeof fetch);
+    await s.selectRows("supplier_master", "SUP-ATLAS");
+    expect(s.calls[0]!.responseShape).toMatchObject({
+      family: "OBJECT_ROWS",
+      rowCount: 2,
+      dataType: "array",
+    });
+  });
+
+  it("2. positional-row `data` is recognized as a legitimate response family", () => {
+    expect(classifyZetarisResponse({ data: [["SUP-ATLAS", "Atlas Components", true]] })).toEqual({
+      family: "POSITIONAL_ROWS",
+      dataType: "array",
+      rowCount: 1,
+      firstRowWidth: 3,
+      topLevelKeys: ["data"],
+      columnMetadata: "NONE_RECOGNIZED",
+    });
+    expect(classifyZetarisResponse({ data: [] }).family).toBe("EMPTY");
+    expect(classifyZetarisResponse({ data: [{ a: 1 }] }).family).toBe("OBJECT_ROWS");
+    expect(classifyZetarisResponse({ data: [{ a: 1 }, ["x"]] }).family).toBe("MIXED_ROWS");
+    expect(classifyZetarisResponse({ data: "x" }).family).toBe("UNRECOGNIZED");
+    expect(classifyZetarisResponse({ nodata: [] }).family).toBe("UNRECOGNIZED");
+    expect(classifyZetarisResponse([]).family).toBe("UNRECOGNIZED");
+  });
+
+  it("3. no column-metadata shape is documented, so none is recognized (positional rows are never mapped by guessed order)", () => {
+    // If a documented metadata field is ever added to resolveColumnNames, extend this test with a normalization case.
+    for (const metadata of [
+      { columns: ["supplier_id"] },
+      { schema: [{ name: "supplier_id" }] },
+      { meta: ["supplier_id"] },
+      { fields: ["supplier_id"] },
+      { headers: ["supplier_id"] },
+    ]) {
+      expect(resolveColumnNames({ data: [["SUP-ATLAS"]], ...metadata })).toBeNull();
+    }
+  });
+
+  it("4. positional rows without usable column metadata fail with the dedicated compatibility error", async () => {
+    const error = await run({
+      data: [["SUP-ATLAS", "Atlas Components"]],
+      columns: ["supplier_id", "legal_name"],
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ZetarisResponseShapeUnsupportedError);
+    expect(error).toBeInstanceOf(ZetarisRequestError);
+    expect((error as ZetarisResponseShapeUnsupportedError).shape).toMatchObject({
+      family: "POSITIONAL_ROWS",
+      rowCount: 1,
+      firstRowWidth: 2,
+      topLevelKeys: ["columns", "data"],
+    });
+    expect((error as Error).message).toMatch(/POSITIONAL_ROWS.*cannot be normalized/s);
+  });
+
+  it("5. the compatibility error carries no secrets and no row values", async () => {
+    const body = { data: [["SUP-ATLAS", KEY, "tenant-secret-value"]], note: `bearer ${KEY}` };
+    const s = source((async () => json(body)) as typeof fetch);
+    const error = (await s
+      .selectRows("supplier_master", "SUP-ATLAS")
+      .catch((e: unknown) => e)) as ZetarisResponseShapeUnsupportedError;
+    const everything = JSON.stringify({
+      message: error.message,
+      shape: error.shape,
+      calls: s.calls,
+      name: error.name,
+      status: error.httpStatus,
+    });
+    for (const secret of [KEY, "tenant-secret-value", "SUP-ATLAS"])
+      expect(everything).not.toContain(secret);
+    expect(error.shape.topLevelKeys).toEqual(["data", "note"]); // key names only
+  });
+
+  it("6. the smoke-test response `data: [[1]]` is classified, not treated as impossible", async () => {
+    expect(classifyZetarisResponse({ data: [[1]] })).toMatchObject({
+      family: "POSITIONAL_ROWS",
+      rowCount: 1,
+      firstRowWidth: 1,
+    });
+    const s = source((async () => json({ data: [[1]] })) as typeof fetch);
+    const error = await s.selectRows("supplier_master", "SUP-ATLAS").catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ZetarisResponseShapeUnsupportedError);
+    expect(s.calls[0]!.responseShape?.family).toBe("POSITIONAL_ROWS"); // surfaced to the live probe
+  });
+
+  it("does not misreport unusable bodies as positional or as JSON failures", async () => {
+    for (const body of [{ data: "nope" }, { data: { rows: [] } }, { data: [1, 2] }, []]) {
+      const error = await run(body).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ZetarisResponseShapeUnsupportedError);
+      expect((error as ZetarisResponseShapeUnsupportedError).shape.family).toBe("UNRECOGNIZED");
+    }
   });
 });

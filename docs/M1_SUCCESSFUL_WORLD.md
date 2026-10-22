@@ -35,12 +35,12 @@ Zetaris rows are normalized into M0 `TruthAssertion`s and persisted as immutable
 
 ## Mock vs live
 
-|                | MOCK (`BRINDLE_RUNTIME_MODE=local`, default)                                                  | LIVE (`BRINDLE_RUNTIME_MODE=live`)          |
-| -------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Truth          | `MockFixtureTruthRowSource` serving `src/demo/seed-data.ts`; source id `MOCK:zetaris-fixture` | Real Zetaris SQL API; source id `zetaris`   |
-| Reasoning      | `MockDeterministicReasoner`, model id `MOCK:deterministic-reasoner`                           | Real Nemotron over NVIDIA or Meterless      |
-| Database       | `DATABASE_URL` if set, else in-process PostgreSQL (PGlite)                                    | `DATABASE_URL` required                     |
-| Missing config | n/a                                                                                           | **Fails loudly. Never falls back to mock.** |
+|                | MOCK (`BRINDLE_RUNTIME_MODE=local`, default)                                                  | LIVE (`BRINDLE_RUNTIME_MODE=live`)                                                                                                                                           |
+| -------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Truth          | `MockFixtureTruthRowSource` serving `src/demo/seed-data.ts`; source id `MOCK:zetaris-fixture` | Real Zetaris (hackathon local Docker truth plane) via `POST /sql-editor/sqls/run`; source id `zetaris`                                                                       |
+| Reasoning      | `MockDeterministicReasoner`, model id `MOCK:deterministic-reasoner`                           | **Meterless Nightshift Runtime (primary)** -> NVIDIA provider inside Nightshift -> Nemotron-backed lane. Direct NVIDIA is development/probe only and is **rejected** in LIVE |
+| Database       | `DATABASE_URL` if set, else in-process PostgreSQL (PGlite)                                    | `DATABASE_URL` required                                                                                                                                                      |
+| Missing config | n/a                                                                                           | **Fails loudly. Never falls back to mock.**                                                                                                                                  |
 
 Mode comes only from `BRINDLE_RUNTIME_MODE`, never inferred from credentials. It is recorded on each `demo_runs` row and shown in the `/demo` banner (`PROVIDER MODE: LIVE` or `MOCK — no sponsor was contacted`). CI is MOCK-only and needs no secrets.
 
@@ -56,10 +56,12 @@ API (fixed actions only, no body, no arbitrary action names): `GET /api/demo/sta
 
 ## Known limitations
 
-- **LIVE acceptance not yet achieved** (no sponsor access in the implementing session); see `docs/M1_SPONSOR_INTEGRATION.md`.
+- **LIVE acceptance not yet achieved** (no sponsor access in the implementing session); see `docs/M1_SPONSOR_INTEGRATION.md`. Accepting it requires proof that a Nemotron-family model executed behind Meterless, not merely a reachable route.
+- **M1 does not satisfy the hackathon requirement for an actual Meterless Engine in a working feature.** That is H-MEM Recovery Memory, mandatory in M5 (`docs/MILESTONES.md`).
+- Zetaris may return positional rows; without documented column metadata Brindle refuses them with `ZetarisResponseShapeUnsupportedError` rather than guessing column order (`docs/M1_SPONSOR_INTEGRATION.md`).
 - The demo API has no authentication; do not expose a LIVE deployment publicly (reset and run are unauthenticated by design in M1).
 - The procurement request supplies the candidate supplier; there is no supplier search or comparison.
-- One truth read per supplier per run; Zetaris multi-page results and `knownAsOf` history are unsupported until M2.
+- One truth read per supplier per run; results are bounded by a `limit` of 100 and `knownAsOf` history is unsupported until M2.
 - A run blocked mid-way (e.g. at Finance) leaves earlier committed steps in place and requires an explicit reset.
 - The mock database for local mode is in-process and lost on restart.
 - Out of scope and deliberately absent: consequence-graph construction, truth-revision handling, counterfactuals, recovery.
