@@ -25,12 +25,28 @@ export interface ReasoningRequest<S extends z.ZodType> {
   outputSchema: S;
 }
 
+export type UnderlyingModelSource =
+  /** The runtime itself reported a non-route model identifier for this very request. */
+  | "PROVIDER_REPORTED"
+  /** Direct provider call: the requested model is the model. */
+  | "REQUESTED_DIRECT"
+  /** Only a routing identifier is known. Does NOT prove which model executed. */
+  | "UNPROVEN";
+
 export interface ReasoningResult<T> {
   output: T;
-  /** Model that actually served the request, as reported by the provider. */
+  /**
+   * The id recorded on DecisionReceipts: the underlying model when known,
+   * otherwise `route:<runtimeRoute>` so a route can never pass as a model.
+   */
   modelId: string;
   traceId: string;
-  /** Route used (e.g. "nvidia", "meterless"). Absent for test doubles. */
+  /** Which runtime path served the request (e.g. "meterless/auto", "nvidia-direct"). A route is not a model. */
+  runtimeRoute?: string;
+  /** The model that actually executed, or null if not demonstrated. */
+  underlyingModel?: string | null;
+  underlyingModelSource?: UnderlyingModelSource;
+  /** Reasoning provider kind: "meterless" | "nvidia". Absent for test doubles. */
   provider?: string;
   /** Provider-side correlation id, if the provider exposes one. */
   providerRequestId?: string | null;

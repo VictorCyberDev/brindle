@@ -52,7 +52,7 @@ export default async function DemoPage() {
   let state: DemoState | null = null;
   let error: string | null = null;
   let mode: "LIVE" | "MOCK" = "MOCK";
-  let reasoning: { provider: string; modelId: string } | null = null;
+  let reasoning: { provider: string; runtimeRoute: string } | null = null;
   try {
     const config = getConfig();
     mode = providerModeOf(config);
@@ -68,8 +68,12 @@ export default async function DemoPage() {
   const run = state?.latestRun ?? null;
   // Show what actually produced the world on screen, not just what is configured now.
   const shownMode = run?.mode ?? mode;
-  const shownModel =
-    run?.modelId ?? (mode === "MOCK" ? "MOCK:deterministic-reasoner" : (reasoning?.modelId ?? "—"));
+  const shownModel = run?.modelId ?? (mode === "MOCK" ? "MOCK:deterministic-reasoner" : "—");
+  const shownRoute = run?.runtimeRoute ?? reasoning?.runtimeRoute ?? "—";
+  // A route is never shown as a model: unproven stays unproven.
+  const shownUnderlying = run
+    ? (run.underlyingModel ?? (run.mode === "MOCK" ? "n/a (MOCK)" : "UNPROVEN"))
+    : "—";
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
@@ -189,7 +193,9 @@ export default async function DemoPage() {
             </h2>
             <dl>
               <Row label="Provider mode" value={shownMode} testId="provider-mode" />
-              <Row label="Model" value={shownModel} testId="model-id" />
+              <Row label="Model recorded on receipts" value={shownModel} testId="model-id" />
+              <Row label="Runtime route" value={shownRoute} testId="runtime-route" />
+              <Row label="Underlying model" value={shownUnderlying} testId="underlying-model" />
               <Row
                 label="Last run"
                 value={run ? `${run.status} · ${run.startedAt}` : "none"}

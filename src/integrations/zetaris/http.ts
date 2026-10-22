@@ -1,49 +1,56 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { IntegrationNotAvailableError } from "../errors";
+import type { TruthRowSource } from "./reader";
 import type { RawRow, TruthTable } from "./rows";
 import { TRUTH_TABLES } from "./rows";
-import type { TruthRowSource } from "./reader";
 
 /**
- * LIVE Zetaris SQL client, implemented against Zetaris's published OpenAPI
- * spec (https://api.saas.enterprise.zetaris.com/redoc/docs.yaml, v1):
- *   POST   /api/v1.0/query/sql/start            {select, pageLimit}  -> OpenSqlResponse
- *   GET    /api/v1.0/query/sql/page             ?queryToken&pageLimit&pageNumber
- *   DELETE /api/v1.0/query/sql/close/{queryToken}
- * Auth: `Authorization: Bearer <Zetaris API token>`, plus `X-Org-ID` (int64)
- * and `X-Request-ID` (uuid) on every call.
+ * LIVE Zetaris SQL client, implemented against the hackathon Participant Setup
+ * Guide contract (Zetaris runs as a local Docker truth plane; REST base e.g.
+ * http://localhost:8888/api/v1.0, configured via ZETARIS_REST_URL):
+ *
+ *   POST {ZETARIS_REST_URL}/sql-editor/sqls/run
+ *   Authorization: Bearer <Zetaris API key>
+ *   X-Org-ID: <org id>
+ *   X-Request-ID: <fresh uuid>
+ *   Content-Type: application/json
+ *   {"queryId": "<fresh uuid>", "sql": "<fixed read-only SELECT>", "source": "SqlEditor", "limit": <int>}
+ *
+ * The query results are exposed through the response's `data`.
  *
  * READ-ONLY by construction: SQL is only ever produced from the fixed
- * templates below, there is no method that accepts caller-supplied SQL, and a
+ * template below, there is no method that accepts caller-supplied SQL, and a
  * guard rejects anything that is not a single SELECT.
+ *
+ * (The earlier /query/sql/start|page|close cursor API from Zetaris's generic
+ * OpenAPI spec is NOT the hackathon path and is not used.)
  */
 export interface ZetarisHttpConfig {
-  baseUrl: string;
+  /** Full REST base including version path, e.g. http://localhost:8888/api/v1.0 */
+  restUrl: string;
   apiKey: string;
   orgId: number;
   schema: string;
   fetch?: typeof fetch;
 }
 
+export const ZETARIS_RUN_PATH = "/sql-editor/sqls/run";
+export const ZETARIS_SOURCE = "SqlEditor";
+/** Truth tables are tiny; the limit is a hard bound, not a pagination size. */
+export const ZETARIS_ROW_LIMIT = 100;
+
 export interface ZetarisCallRecord {
   requestId: string;
-  operation: "start" | "page" | "close";
+  queryId: string;
+  operation: "run";
   httpStatus: number;
   /** Response-side correlation header, if Zetaris returns one. */
   serverRequestId: string | null;
 }
 
-const openSqlResponse = z.object({
-  records: z.array(z.record(z.string(), z.unknown())).optional(),
-  pageNumber: z.number(),
-  pageLimit: z.number(),
-  totalCount: z.number(),
-  totalPages: z.number(),
-  queryToken: z.string().min(1),
-});
+/** Documented shape: results live in `data`. Records must be objects (column -> value). */
+const runResponseSchema = z.object({ data: z.array(z.record(z.string(), z.unknown())) });
 
-const PAGE_LIMIT = 100;
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]{0,62}$/;
 const KEY = /^[A-Za-z0-9_-]{1,64}$/;
 const KEY_COLUMN: Record<TruthTable, string> = {
@@ -88,63 +95,20 @@ export class ZetarisSqlRowSource implements TruthRowSource {
 
   async selectRows(table: TruthTable, key: string): Promise<RawRow[]> {
     const sql = buildSelect(this.config.schema, table, key);
-    const first = await this.call("start", "POST", "/api/v1.0/query/sql/start", {
-      select: sql,
-      pageLimit: PAGE_LIMIT,
-    });
-    const page = openSqlResponse.safeParse(first);
-    if (!page.success) {
-      throw new ZetarisRequestError(
-        "Zetaris start response did not match the documented OpenSqlResponse shape",
-        null,
-        "n/a",
-      );
-    }
-    try {
-      if (page.data.totalPages > 1) {
-        throw new IntegrationNotAvailableError(
-          "zetaris",
-          "selectRows",
-          "multi-page results are not supported in M1 (truth tables are expected to be tiny)",
-        );
-      }
-      return (page.data.records ?? []) as RawRow[];
-    } finally {
-      await this.close(page.data.queryToken);
-    }
-  }
-
-  private async close(queryToken: string): Promise<void> {
-    try {
-      await this.call(
-        "close",
-        "DELETE",
-        `/api/v1.0/query/sql/close/${encodeURIComponent(queryToken)}`,
-      );
-    } catch {
-      // Best-effort cleanup of a server-side cursor; never mask the real outcome.
-    }
-  }
-
-  private async call(
-    operation: ZetarisCallRecord["operation"],
-    method: "POST" | "GET" | "DELETE",
-    path: string,
-    body?: unknown,
-  ): Promise<unknown> {
     const requestId = randomUUID();
+    const queryId = randomUUID();
     let res: Response;
     try {
-      res = await this.doFetch(`${this.config.baseUrl}${path}`, {
-        method,
+      res = await this.doFetch(`${this.config.restUrl}${ZETARIS_RUN_PATH}`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${this.config.apiKey}`,
           "X-Org-ID": String(this.config.orgId),
           "X-Request-ID": requestId,
+          "Content-Type": "application/json",
           Accept: "application/json",
-          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: JSON.stringify({ queryId, sql, source: ZETARIS_SOURCE, limit: ZETARIS_ROW_LIMIT }),
         signal: AbortSignal.timeout(20_000),
       });
     } catch (error) {
@@ -156,18 +120,40 @@ export class ZetarisSqlRowSource implements TruthRowSource {
     }
     this.calls.push({
       requestId,
-      operation,
+      queryId,
+      operation: "run",
       httpStatus: res.status,
       serverRequestId: res.headers.get("x-request-id"),
     });
     if (!res.ok) {
       // Body is not echoed: it may contain tenant details. Status + our request id suffice for support.
       throw new ZetarisRequestError(
-        `Zetaris ${operation} failed with HTTP ${res.status}`,
+        `Zetaris run failed with HTTP ${res.status}`,
         res.status,
         requestId,
       );
     }
-    return operation === "close" ? null : res.json();
+    let body: unknown;
+    try {
+      body = await res.json();
+    } catch {
+      throw new ZetarisRequestError("Zetaris response was not JSON", res.status, requestId);
+    }
+    const parsed = runResponseSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new ZetarisRequestError(
+        "Zetaris response did not expose an array of records in `data`",
+        res.status,
+        requestId,
+      );
+    }
+    if (parsed.data.data.length >= ZETARIS_ROW_LIMIT) {
+      throw new ZetarisRequestError(
+        "Zetaris result reached the row limit; truth tables must be tiny",
+        res.status,
+        requestId,
+      );
+    }
+    return parsed.data.data as RawRow[];
   }
 }

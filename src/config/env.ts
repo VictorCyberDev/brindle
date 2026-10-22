@@ -1,81 +1,100 @@
 import { z } from "zod";
 
 export const RUNTIME_MODES = ["local", "live"] as const;
-export const NEMOTRON_PROVIDERS = ["nvidia", "meterless"] as const;
-export const DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 export type RuntimeMode = (typeof RUNTIME_MODES)[number];
 
-/** Blank values in .env files mean "not set". */
-const optionalString = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-  z.string().trim().min(1).optional(),
-);
+/**
+ * Reasoning providers.
+ *  - "meterless": PRIMARY. Brindle -> Meterless Nightshift Runtime -> NVIDIA provider configured inside Nightshift -> Nemotron-backed lane.
+ *  - "nvidia":    SECONDARY. Direct NVIDIA hosted API; the selected model must be Nemotron-family.
+ */
+export const NEMOTRON_PROVIDERS = ["meterless", "nvidia"] as const;
+export type NemotronProvider = (typeof NEMOTRON_PROVIDERS)[number];
+export const DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1";
 
-const optionalUrl = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-  z.url({ protocol: /^https?$/ }).optional(),
-);
+/** Blank values in .env files mean "not set". */
+const blankToUndefined = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefined : v);
+const optionalString = z.preprocess(blankToUndefined, z.string().trim().min(1).optional());
+const optionalUrl = z.preprocess(blankToUndefined, z.url({ protocol: /^https?$/ }).optional());
 
 const rawEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   BRINDLE_RUNTIME_MODE: z.enum(RUNTIME_MODES).default("local"),
   DATABASE_URL: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    blankToUndefined,
     z
       .string()
       .regex(/^postgres(ql)?:\/\//, "must be a postgres:// or postgresql:// URL")
       .optional(),
   ),
-  ZETARIS_BASE_URL: optionalUrl,
+  // Zetaris truth plane (hackathon local Docker setup, REST base e.g. http://localhost:8888/api/v1.0)
+  ZETARIS_REST_URL: optionalUrl,
   ZETARIS_API_KEY: optionalString,
   ZETARIS_ORG_ID: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    blankToUndefined,
     z
       .string()
       .regex(/^[0-9]+$/, "must be an integer organisation id")
       .optional(),
   ),
   ZETARIS_SCHEMA: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    blankToUndefined,
     z
       .string()
       .regex(/^[A-Za-z_][A-Za-z0-9_]{0,62}$/, "must be a plain SQL identifier")
       .optional(),
   ),
+  // Meterless Nightshift Runtime (primary AI runtime)
   METERLESS_BASE_URL: optionalUrl,
-  METERLESS_API_KEY: optionalString,
+  METERLESS_RUNTIME_TOKEN: optionalString,
+  METERLESS_MODEL: optionalString,
+  // Direct NVIDIA (secondary)
   NVIDIA_BASE_URL: optionalUrl,
   NVIDIA_API_KEY: optionalString,
-  NEMOTRON_PROVIDER: z.preprocess(
-    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-    z.enum(NEMOTRON_PROVIDERS).optional(),
-  ),
+  NEMOTRON_PROVIDER: z.preprocess(blankToUndefined, z.enum(NEMOTRON_PROVIDERS).optional()),
   NEMOTRON_MODEL_ID: optionalString,
 });
-
-export type SponsorConfig =
-  { status: "unconfigured" } | { status: "configured"; baseUrl: string; apiKey: string };
 
 export type ZetarisConfig =
   | { status: "unconfigured" }
   | {
       status: "configured";
-      baseUrl: string;
-      /** Zetaris API token, sent as a Bearer token. */
+      /** Full REST base including the API version path, e.g. http://localhost:8888/api/v1.0 */
+      restUrl: string;
+      /** Zetaris API key, sent as a Bearer token. */
       apiKey: string;
       orgId: number;
       schema: string;
     };
 
-/** Reasoning is reached over an OpenAI-compatible API, via NVIDIA directly or a Meterless hotspot. */
+export type MeterlessConfig =
+  | { status: "unconfigured" }
+  | {
+      status: "configured";
+      /** Origin of the Nightshift Runtime; endpoints are /v1/models and /v1/chat/completions. */
+      baseUrl: string;
+      runtimeToken: string;
+      /** The Meterless ROUTE/lane identifier requested (e.g. "meterless/auto"). A route is not proof of the underlying model. */
+      model: string;
+    };
+
 export type NemotronConfig =
   | { status: "unconfigured" }
   | {
       status: "configured";
-      provider: (typeof NEMOTRON_PROVIDERS)[number];
-      modelId: string;
+      provider: "meterless";
+      baseUrl: string;
+      runtimeToken: string;
+      /** Requested runtime route. */
+      runtimeRoute: string;
+    }
+  | {
+      status: "configured";
+      provider: "nvidia";
       baseUrl: string;
       apiKey: string;
+      /** Direct-NVIDIA model; validated to be Nemotron-family. */
+      modelId: string;
     };
 
 export interface AppConfig {
@@ -84,7 +103,7 @@ export interface AppConfig {
   /** undefined when not provided; required in live mode. */
   databaseUrl: string | undefined;
   zetaris: ZetarisConfig;
-  meterless: SponsorConfig;
+  meterless: MeterlessConfig;
   nemotron: NemotronConfig;
 }
 
@@ -99,22 +118,11 @@ export class ConfigError extends Error {
   }
 }
 
-function sponsor(
-  label: string,
-  baseUrlKey: string,
-  apiKeyKey: string,
-  baseUrl: string | undefined,
-  apiKey: string | undefined,
-  issues: string[],
-): SponsorConfig {
-  if (baseUrl && apiKey) return { status: "configured", baseUrl, apiKey };
-  if (baseUrl || apiKey) {
-    issues.push(
-      `${label} is partially configured: set both ${baseUrlKey} and ${apiKeyKey}, or neither`,
-    );
-  }
-  return { status: "unconfigured" };
-}
+export const isNemotronFamily = (modelId: string) => /nemotron/i.test(modelId);
+
+const stripTrailingSlashes = (url: string) => url.replace(/\/+$/, "");
+/** Meterless endpoints are /v1/...; tolerate a base that already ends in /v1. */
+const meterlessOrigin = (url: string) => stripTrailingSlashes(url).replace(/\/v1$/, "");
 
 /** Pure: validates an env map into typed config. */
 export function loadConfig(env: Readonly<Record<string, string | undefined>>): AppConfig {
@@ -126,82 +134,86 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>>): A
   }
   const e = parsed.data;
   const issues: string[] = [];
+  const live = e.BRINDLE_RUNTIME_MODE === "live";
 
-  const zetarisParts = {
-    ZETARIS_BASE_URL: e.ZETARIS_BASE_URL,
-    ZETARIS_API_KEY: e.ZETARIS_API_KEY,
-    ZETARIS_ORG_ID: e.ZETARIS_ORG_ID,
-    ZETARIS_SCHEMA: e.ZETARIS_SCHEMA,
-  };
+  // --- Zetaris: all four or none ---
+  const zetarisParts = [e.ZETARIS_REST_URL, e.ZETARIS_API_KEY, e.ZETARIS_ORG_ID, e.ZETARIS_SCHEMA];
+  const zetarisSet = zetarisParts.filter((v) => v !== undefined).length;
   let zetaris: ZetarisConfig = { status: "unconfigured" };
-  const zetarisSet = Object.entries(zetarisParts).filter(([, v]) => v !== undefined);
-  if (zetarisSet.length === 4) {
+  if (zetarisSet === 4) {
     zetaris = {
       status: "configured",
-      baseUrl: e.ZETARIS_BASE_URL!.replace(/\/+$/, ""),
+      restUrl: stripTrailingSlashes(e.ZETARIS_REST_URL!),
       apiKey: e.ZETARIS_API_KEY!,
       orgId: Number(e.ZETARIS_ORG_ID),
       schema: e.ZETARIS_SCHEMA!,
     };
-  } else if (zetarisSet.length > 0) {
+  } else if (zetarisSet > 0) {
     issues.push(
-      "Zetaris is partially configured: set all of ZETARIS_BASE_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID and ZETARIS_SCHEMA, or none",
+      "Zetaris is partially configured: set all of ZETARIS_REST_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID and ZETARIS_SCHEMA, or none",
+    );
+  } else if (live) {
+    issues.push(
+      "ZETARIS_REST_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID and ZETARIS_SCHEMA are required when BRINDLE_RUNTIME_MODE=live",
     );
   }
 
-  const meterless = sponsor(
-    "Meterless",
-    "METERLESS_BASE_URL",
-    "METERLESS_API_KEY",
-    e.METERLESS_BASE_URL,
-    e.METERLESS_API_KEY,
-    issues,
-  );
+  // --- Meterless Nightshift Runtime: all three or none ---
+  const meterlessParts = [e.METERLESS_BASE_URL, e.METERLESS_RUNTIME_TOKEN, e.METERLESS_MODEL];
+  const meterlessSet = meterlessParts.filter((v) => v !== undefined).length;
+  let meterless: MeterlessConfig = { status: "unconfigured" };
+  if (meterlessSet === 3) {
+    meterless = {
+      status: "configured",
+      baseUrl: meterlessOrigin(e.METERLESS_BASE_URL!),
+      runtimeToken: e.METERLESS_RUNTIME_TOKEN!,
+      model: e.METERLESS_MODEL!,
+    };
+  } else if (meterlessSet > 0) {
+    issues.push(
+      "Meterless is partially configured: set all of METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN and METERLESS_MODEL, or none",
+    );
+  }
 
+  // --- Reasoning provider: Meterless is primary; direct NVIDIA only when explicitly selected ---
+  const provider: NemotronProvider = e.NEMOTRON_PROVIDER ?? "meterless";
   let nemotron: NemotronConfig = { status: "unconfigured" };
-  if (e.NEMOTRON_MODEL_ID || e.NEMOTRON_PROVIDER) {
-    if (!e.NEMOTRON_MODEL_ID || !e.NEMOTRON_PROVIDER) {
-      issues.push(
-        "Nemotron is partially configured: set both NEMOTRON_PROVIDER and NEMOTRON_MODEL_ID, or neither",
-      );
-    } else if (e.NEMOTRON_PROVIDER === "nvidia") {
-      if (e.NVIDIA_API_KEY) {
-        nemotron = {
-          status: "configured",
-          provider: "nvidia",
-          modelId: e.NEMOTRON_MODEL_ID,
-          baseUrl: (e.NVIDIA_BASE_URL ?? DEFAULT_NVIDIA_BASE_URL).replace(/\/+$/, ""),
-          apiKey: e.NVIDIA_API_KEY,
-        };
-      } else {
-        issues.push("NEMOTRON_PROVIDER=nvidia requires NVIDIA_API_KEY");
-      }
-    } else if (meterless.status === "configured") {
+  if (provider === "meterless") {
+    if (meterless.status === "configured") {
       nemotron = {
         status: "configured",
         provider: "meterless",
-        modelId: e.NEMOTRON_MODEL_ID,
-        baseUrl: meterless.baseUrl.replace(/\/+$/, ""),
-        apiKey: meterless.apiKey,
+        baseUrl: meterless.baseUrl,
+        runtimeToken: meterless.runtimeToken,
+        runtimeRoute: meterless.model,
       };
-    } else {
-      issues.push("NEMOTRON_PROVIDER=meterless requires METERLESS_BASE_URL and METERLESS_API_KEY");
+    } else if (live && meterlessSet === 0) {
+      issues.push(
+        "METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN and METERLESS_MODEL are required when BRINDLE_RUNTIME_MODE=live (Meterless Nightshift is the primary runtime)",
+      );
+    }
+  } else {
+    const anyNvidia = e.NVIDIA_API_KEY || e.NEMOTRON_MODEL_ID;
+    if (live || anyNvidia) {
+      if (!e.NVIDIA_API_KEY) issues.push("NEMOTRON_PROVIDER=nvidia requires NVIDIA_API_KEY");
+      if (!e.NEMOTRON_MODEL_ID) issues.push("NEMOTRON_PROVIDER=nvidia requires NEMOTRON_MODEL_ID");
+      else if (!isNemotronFamily(e.NEMOTRON_MODEL_ID)) {
+        issues.push("NEMOTRON_MODEL_ID must be a Nemotron-family model when using direct NVIDIA");
+      }
+    }
+    if (e.NVIDIA_API_KEY && e.NEMOTRON_MODEL_ID && isNemotronFamily(e.NEMOTRON_MODEL_ID)) {
+      nemotron = {
+        status: "configured",
+        provider: "nvidia",
+        baseUrl: stripTrailingSlashes(e.NVIDIA_BASE_URL ?? DEFAULT_NVIDIA_BASE_URL),
+        apiKey: e.NVIDIA_API_KEY,
+        modelId: e.NEMOTRON_MODEL_ID,
+      };
     }
   }
 
-  if (e.BRINDLE_RUNTIME_MODE === "live") {
-    if (!e.DATABASE_URL) issues.push("DATABASE_URL is required when BRINDLE_RUNTIME_MODE=live");
-    if (zetaris.status === "unconfigured" && zetarisSet.length === 0) {
-      issues.push(
-        "ZETARIS_BASE_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID and ZETARIS_SCHEMA are required when BRINDLE_RUNTIME_MODE=live",
-      );
-    }
-    if (nemotron.status === "unconfigured" && !e.NEMOTRON_MODEL_ID && !e.NEMOTRON_PROVIDER) {
-      issues.push(
-        "NEMOTRON_PROVIDER and NEMOTRON_MODEL_ID (plus that provider's credentials) are required when BRINDLE_RUNTIME_MODE=live",
-      );
-    }
-  }
+  if (live && !e.DATABASE_URL)
+    issues.push("DATABASE_URL is required when BRINDLE_RUNTIME_MODE=live");
 
   if (issues.length > 0) throw new ConfigError(issues);
 
@@ -224,8 +236,8 @@ export function providerModeOf(config: Pick<AppConfig, "runtimeMode">): Provider
 
 export interface ConfigSummary {
   providerMode: ProviderMode;
-  /** Non-secret identifiers only. */
-  reasoning: { provider: string; modelId: string } | null;
+  /** Non-secret identifiers only. `runtimeRoute` is a route, not proof of the underlying model. */
+  reasoning: { provider: NemotronProvider; runtimeRoute: string } | null;
   runtimeMode: RuntimeMode;
   nodeEnv: AppConfig["nodeEnv"];
   integrations: {
@@ -238,11 +250,15 @@ export interface ConfigSummary {
 
 /** Secret-free view of configuration, safe to log or return over HTTP. */
 export function summarizeConfig(config: AppConfig): ConfigSummary {
+  const n = config.nemotron;
   return {
     providerMode: providerModeOf(config),
     reasoning:
-      config.nemotron.status === "configured"
-        ? { provider: config.nemotron.provider, modelId: config.nemotron.modelId }
+      n.status === "configured"
+        ? {
+            provider: n.provider,
+            runtimeRoute: n.provider === "meterless" ? n.runtimeRoute : "nvidia-direct",
+          }
         : null,
     runtimeMode: config.runtimeMode,
     nodeEnv: config.nodeEnv,

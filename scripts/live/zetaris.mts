@@ -8,17 +8,17 @@ import { banner, hostOf, loadConfigOrExit, refuse } from "../lib";
 const config = loadConfigOrExit();
 if (config.zetaris.status !== "configured") {
   refuse(
-    "Zetaris is not configured (ZETARIS_BASE_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID, ZETARIS_SCHEMA).",
+    "Zetaris is not configured (ZETARIS_REST_URL, ZETARIS_API_KEY, ZETARIS_ORG_ID, ZETARIS_SCHEMA).",
   );
 }
 const z = config.zetaris;
 banner("Zetaris read-only truth probe", "LIVE");
-console.log(`tenant host : ${hostOf(z.baseUrl)}`);
+console.log(`REST host   : ${hostOf(z.restUrl)}`);
 console.log(`org id      : ${z.orgId}`);
 console.log(`schema      : ${z.schema}`);
 
 const source = new ZetarisSqlRowSource({
-  baseUrl: z.baseUrl,
+  restUrl: z.restUrl,
   apiKey: z.apiKey,
   orgId: z.orgId,
   schema: z.schema,
@@ -67,7 +67,7 @@ try {
 console.log("\nHTTP calls (secret-free):");
 for (const c of source.calls) {
   console.log(
-    `  ${c.operation.padEnd(5)} HTTP ${c.httpStatus}  X-Request-ID ${c.requestId}  server-id ${c.serverRequestId ?? "(none exposed)"}`,
+    `  POST /sql-editor/sqls/run HTTP ${c.httpStatus}  X-Request-ID ${c.requestId}  queryId ${c.queryId}  server-id ${c.serverRequestId ?? "(none exposed)"}`,
   );
 }
 console.log(failed ? "\nRESULT: FAILED" : "\nRESULT: OK (live Zetaris read succeeded)");

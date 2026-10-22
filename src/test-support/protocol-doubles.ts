@@ -20,6 +20,7 @@ export interface Seen {
   body: unknown;
 }
 
+/** Imitates the hackathon contract: POST /sql-editor/sqls/run -> {data: [...records]}. */
 export function zetarisDouble(seen: Seen[]): typeof fetch {
   return (async (url: RequestInfo | URL, init?: RequestInit) => {
     const u = String(url);
@@ -29,28 +30,23 @@ export function zetarisDouble(seen: Seen[]): typeof fetch {
       headers: new Headers(init?.headers),
       body: init?.body ? JSON.parse(String(init.body)) : undefined,
     });
-    if (u.endsWith("/api/v1.0/query/sql/start")) {
-      const select = (JSON.parse(String(init!.body)) as { select: string }).select;
+    if (u.endsWith("/sql-editor/sqls/run") && init?.method === "POST") {
+      const select = (JSON.parse(String(init.body)) as { sql: string }).sql;
       const table = /FROM \w+\.(\w+) WHERE (\w+) = '([^']+)'/.exec(select)!;
       const rows = (ZETARIS_SEED as Record<string, readonly Record<string, unknown>[]>)[
         table[1]!
       ]!.filter((r) => r[table[2]!] === table[3]);
-      return json({
-        records: rows,
-        pageNumber: 1,
-        pageLimit: 100,
-        totalCount: rows.length,
-        totalPages: 1,
-        queryToken: "qt-1",
-      });
+      return json({ data: rows });
     }
-    if (u.includes("/api/v1.0/query/sql/close/")) return new Response(null, { status: 200 });
     return new Response("nope", { status: 404 });
   }) as typeof fetch;
 }
 
 /** Chat-completions double that answers like a well-behaved model, derived from the request's own evidence. */
-export function chatDouble(seen: Seen[], modelId = "protocol-double-model"): typeof fetch {
+export function chatDouble(
+  seen: Seen[],
+  modelId: string | null = "protocol-double-model",
+): typeof fetch {
   return (async (url: RequestInfo | URL, init?: RequestInit) => {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     seen.push({

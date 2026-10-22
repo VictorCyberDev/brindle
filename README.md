@@ -50,7 +50,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [ADR 0001](docs/adr/0001-tr
 ## Stack
 
 Next.js · TypeScript · React · Tailwind CSS · PostgreSQL · Drizzle ORM · Zod · Vitest · Playwright · GitHub Actions.
-Later: Vercel (hosting), Zetaris (truth plane), NVIDIA Nemotron (reasoning), Meterless (runtime + recovery memory).
+Sponsors: Zetaris (hackathon local Docker truth plane), Meterless Nightshift (primary AI runtime) with NVIDIA configured inside it, Nemotron (required reasoning model), and H-MEM (mandatory M5 Meterless Engine integration). Later: Vercel (hosting).
 
 ## Getting started
 

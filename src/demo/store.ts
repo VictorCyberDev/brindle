@@ -369,7 +369,23 @@ export interface DemoState {
   }[];
   decisionReceiptCount: number;
   truth: { assertion: TruthAssertion }[];
-  latestRun: Omit<RunRecord, "detail"> | null;
+  latestRun:
+    | (Omit<RunRecord, "detail"> & { runtimeRoute: string | null; underlyingModel: string | null })
+    | null;
+}
+
+function firstStepAttribution(detail: unknown): {
+  runtimeRoute: string | null;
+  underlyingModel: string | null;
+} {
+  const steps = (
+    detail as { steps?: { runtimeRoute?: string | null; underlyingModel?: string | null }[] } | null
+  )?.steps;
+  const first = steps?.[0];
+  return {
+    runtimeRoute: first?.runtimeRoute ?? null,
+    underlyingModel: first?.underlyingModel ?? null,
+  };
 }
 
 export async function readDemoState(db: Db): Promise<DemoState> {
@@ -411,6 +427,7 @@ export async function readDemoState(db: Db): Promise<DemoState> {
           traceId: run.traceId,
           startedAt: iso(run.startedAt),
           finishedAt: iso(run.finishedAt),
+          ...firstStepAttribution(run.detail),
         }
       : null,
   };

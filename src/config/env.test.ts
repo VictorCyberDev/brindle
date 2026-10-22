@@ -4,14 +4,13 @@ import { ConfigError, loadConfig, summarizeConfig } from "./env";
 const liveEnv = {
   BRINDLE_RUNTIME_MODE: "live",
   DATABASE_URL: "postgres://u:supersecretpw@db.example.com:5432/brindle",
-  ZETARIS_BASE_URL: "https://zetaris.example.com",
+  ZETARIS_REST_URL: "http://localhost:8888/api/v1.0",
   ZETARIS_API_KEY: "zk-secret-123",
   ZETARIS_ORG_ID: "7",
   ZETARIS_SCHEMA: "brindle_truth",
-  NEMOTRON_PROVIDER: "meterless",
-  NEMOTRON_MODEL_ID: "model-id",
-  METERLESS_BASE_URL: "https://meterless.example.com/v1",
-  METERLESS_API_KEY: "mk-secret-456",
+  METERLESS_BASE_URL: "http://localhost:9000",
+  METERLESS_RUNTIME_TOKEN: "mt-secret-456",
+  METERLESS_MODEL: "meterless/auto",
 };
 
 describe("config validation", () => {
@@ -28,7 +27,7 @@ describe("config validation", () => {
 
   it("treats blank values (as in .env.example) as unset", () => {
     expect(() =>
-      loadConfig({ DATABASE_URL: "", ZETARIS_BASE_URL: "", ZETARIS_API_KEY: "" }),
+      loadConfig({ DATABASE_URL: "", ZETARIS_REST_URL: "", ZETARIS_API_KEY: "" }),
     ).not.toThrow();
   });
 
@@ -44,9 +43,11 @@ describe("config validation", () => {
     const message = (err as ConfigError).message;
     for (const name of [
       "DATABASE_URL",
-      "ZETARIS_BASE_URL",
+      "ZETARIS_REST_URL",
       "ZETARIS_SCHEMA",
-      "NEMOTRON_MODEL_ID",
+      "METERLESS_BASE_URL",
+      "METERLESS_RUNTIME_TOKEN",
+      "METERLESS_MODEL",
     ]) {
       expect(message).toContain(name);
     }
@@ -54,13 +55,13 @@ describe("config validation", () => {
 
   it("rejects half-configured sponsors in any mode", () => {
     expect(() => loadConfig({ ZETARIS_API_KEY: "k" })).toThrow(/partially configured/);
-    expect(() => loadConfig({ METERLESS_BASE_URL: "https://m.example.com" })).toThrow(
+    expect(() => loadConfig({ METERLESS_BASE_URL: "http://localhost:9000" })).toThrow(
       /partially configured/,
     );
   });
 
   it("rejects malformed URLs and unknown modes", () => {
-    expect(() => loadConfig({ ZETARIS_BASE_URL: "not a url", ZETARIS_API_KEY: "k" })).toThrow(
+    expect(() => loadConfig({ ZETARIS_REST_URL: "not a url", ZETARIS_API_KEY: "k" })).toThrow(
       ConfigError,
     );
     expect(() => loadConfig({ DATABASE_URL: "mysql://x" })).toThrow(ConfigError);
@@ -75,29 +76,50 @@ describe("config validation", () => {
       orgId: 7,
       schema: "brindle_truth",
     });
+    expect(config.zetaris).toMatchObject({ restUrl: "http://localhost:8888/api/v1.0" });
     expect(config.nemotron).toMatchObject({
       status: "configured",
       provider: "meterless",
-      modelId: "model-id",
+      runtimeRoute: "meterless/auto",
+      baseUrl: "http://localhost:9000",
     });
   });
 
+  it("tolerates a Meterless base URL that already ends in /v1 and trailing slashes", () => {
+    for (const base of [
+      "http://localhost:9000/v1",
+      "http://localhost:9000/v1/",
+      "http://localhost:9000/",
+    ]) {
+      expect(loadConfig({ ...liveEnv, METERLESS_BASE_URL: base }).meterless).toMatchObject({
+        baseUrl: "http://localhost:9000",
+      });
+    }
+  });
+
   it("supports the direct NVIDIA route and requires its key", () => {
-    const nvidia = { ...liveEnv, NEMOTRON_PROVIDER: "nvidia", NVIDIA_API_KEY: "nv-secret-789" };
+    const nvidia = {
+      ...liveEnv,
+      NEMOTRON_PROVIDER: "nvidia",
+      NVIDIA_API_KEY: "nv-secret-789",
+      NEMOTRON_MODEL_ID: "nvidia/nemotron-3-super",
+    };
     const config = loadConfig(nvidia);
     expect(config.nemotron).toMatchObject({
       provider: "nvidia",
       baseUrl: "https://integrate.api.nvidia.com/v1",
     });
     expect(() => loadConfig({ ...nvidia, NVIDIA_API_KEY: "" })).toThrow(/NVIDIA_API_KEY/);
-    expect(() => loadConfig({ ...liveEnv, METERLESS_API_KEY: "" })).toThrow(/METERLESS/);
+    expect(() => loadConfig({ ...liveEnv, METERLESS_RUNTIME_TOKEN: "" })).toThrow(/METERLESS/);
   });
 
   it("rejects partial Zetaris and partial Nemotron configuration", () => {
     expect(() =>
-      loadConfig({ ZETARIS_BASE_URL: "https://z.example.com", ZETARIS_API_KEY: "k" }),
+      loadConfig({ ZETARIS_REST_URL: "http://localhost:8888/api/v1.0", ZETARIS_API_KEY: "k" }),
     ).toThrow(/ZETARIS_ORG_ID/);
-    expect(() => loadConfig({ NEMOTRON_MODEL_ID: "m" })).toThrow(/NEMOTRON_PROVIDER/);
+    expect(() =>
+      loadConfig({ NEMOTRON_PROVIDER: "nvidia", NEMOTRON_MODEL_ID: "nvidia/nemotron-x" }),
+    ).toThrow(/NVIDIA_API_KEY/);
     expect(() => loadConfig({ ZETARIS_SCHEMA: "bad schema;" })).toThrow(ConfigError);
   });
 
@@ -111,14 +133,14 @@ describe("config validation", () => {
 
   it("never leaks secret values in summaries or error messages", () => {
     const summary = JSON.stringify(summarizeConfig(loadConfig(liveEnv)));
-    for (const secret of ["supersecretpw", "zk-secret-123", "mk-secret-456", "db.example.com"]) {
+    for (const secret of ["supersecretpw", "zk-secret-123", "mt-secret-456", "db.example.com"]) {
       expect(summary).not.toContain(secret);
     }
     try {
       loadConfig({ ...liveEnv, ZETARIS_API_KEY: undefined, METERLESS_BASE_URL: "bad url" });
     } catch (e) {
       const message = (e as Error).message;
-      for (const secret of ["supersecretpw", "mk-secret-456", "zk-secret-123"]) {
+      for (const secret of ["supersecretpw", "mt-secret-456", "zk-secret-123"]) {
         expect(message).not.toContain(secret);
       }
     }

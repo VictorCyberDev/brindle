@@ -65,7 +65,12 @@ export type StepOutcome = {
   poId: string;
   decisionId: string;
   providerRequestId: string | null;
+  /** The id recorded on the receipt: underlying model if demonstrated, else `route:<runtimeRoute>`. */
   servedModelId: string;
+  /** Runtime lane that served the request. A route is not proof of the underlying model. */
+  runtimeRoute: string | null;
+  /** The model that executed, or null when not demonstrated. */
+  underlyingModel: string | null;
 };
 
 export type WorldResult =
@@ -391,6 +396,8 @@ async function runTransaction(
     decisionId: procDecisionId,
     providerRequestId: proc.result.providerRequestId ?? null,
     servedModelId: proc.result.modelId,
+    runtimeRoute: proc.result.runtimeRoute ?? null,
+    underlyingModel: proc.result.underlyingModel ?? null,
   });
 
   /* ---- Finance: decides on the PERSISTED truth context the PO was created under ---- */
@@ -460,6 +467,8 @@ async function runTransaction(
     decisionId: finDecisionId,
     providerRequestId: fin.result.providerRequestId ?? null,
     servedModelId: fin.result.modelId,
+    runtimeRoute: fin.result.runtimeRoute ?? null,
+    underlyingModel: fin.result.underlyingModel ?? null,
   });
 
   /* ---- Operations ---- */
@@ -546,6 +555,8 @@ async function runTransaction(
     decisionId: opsDecisionId,
     providerRequestId: ops.result.providerRequestId ?? null,
     servedModelId: ops.result.modelId,
+    runtimeRoute: ops.result.runtimeRoute ?? null,
+    underlyingModel: ops.result.underlyingModel ?? null,
   });
   return steps;
 }

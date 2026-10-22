@@ -52,6 +52,9 @@ export class MockDeterministicReasoner implements NemotronReasoner {
       modelId: MOCK_MODEL_ID,
       traceId: request.meta.traceId,
       provider: "MOCK",
+      runtimeRoute: "MOCK",
+      underlyingModel: null,
+      underlyingModelSource: "UNPROVEN",
       providerRequestId: null,
     });
   }

@@ -41,6 +41,8 @@ test.describe("M1 demo shell (MOCK mode, in-process PostgreSQL)", () => {
     await expect(page.getByTestId("control")).toContainText("CONTROL / UNRELATED");
     await expect(page.getByTestId("provider-mode")).toHaveText("MOCK");
     await expect(page.getByTestId("model-id")).toHaveText(/^MOCK:/);
+    await expect(page.getByTestId("runtime-route")).toHaveText("MOCK");
+    await expect(page.getByTestId("underlying-model")).toHaveText("n/a (MOCK)");
   });
 
   test("running again is idempotent and the API exposes no secrets", async ({ request }) => {

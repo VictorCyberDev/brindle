@@ -1,7 +1,10 @@
 import type { AppConfig } from "../config/env";
 import { providerModeOf } from "../config/env";
 import { openDb, type DbHandle } from "../db/client";
-import { OpenAiCompatibleNemotronReasoner } from "../integrations/nemotron/openai-compatible";
+import {
+  OpenAiCompatibleNemotronReasoner,
+  type ReasoningRoute,
+} from "../integrations/nemotron/openai-compatible";
 import { RowBackedTruthReader } from "../integrations/zetaris/reader";
 import { ZetarisSqlRowSource } from "../integrations/zetaris/http";
 import { MockFixtureTruthRowSource, MOCK_TRUTH_SOURCE_ID } from "./mock/mock-fixture-truth";
@@ -33,21 +36,26 @@ export async function createWorldRuntime(config: AppConfig): Promise<WorldRuntim
     if (config.zetaris.status !== "configured" || config.nemotron.status !== "configured") {
       await handle.close();
       throw new LiveNotConfiguredError(
-        "LIVE mode requires configured Zetaris and Nemotron; refusing to fall back to mocks.",
+        "LIVE mode requires configured Zetaris and a configured reasoning runtime (Meterless Nightshift is primary); refusing to fall back to mocks.",
       );
     }
     const source = new ZetarisSqlRowSource({
-      baseUrl: config.zetaris.baseUrl,
+      restUrl: config.zetaris.restUrl,
       apiKey: config.zetaris.apiKey,
       orgId: config.zetaris.orgId,
       schema: config.zetaris.schema,
     });
-    const reasoner = new OpenAiCompatibleNemotronReasoner({
-      provider: config.nemotron.provider,
-      baseUrl: config.nemotron.baseUrl,
-      apiKey: config.nemotron.apiKey,
-      modelId: config.nemotron.modelId,
-    });
+    const n = config.nemotron;
+    const route: ReasoningRoute =
+      n.provider === "meterless"
+        ? {
+            provider: "meterless",
+            baseUrl: n.baseUrl,
+            runtimeToken: n.runtimeToken,
+            runtimeRoute: n.runtimeRoute,
+          }
+        : { provider: "nvidia", baseUrl: n.baseUrl, apiKey: n.apiKey, modelId: n.modelId };
+    const reasoner = new OpenAiCompatibleNemotronReasoner({ route });
     return {
       handle,
       zetarisCalls: () => source.calls,
@@ -62,8 +70,8 @@ export async function createWorldRuntime(config: AppConfig): Promise<WorldRuntim
         reasoner,
         mode: "LIVE",
         truthSourceId: "zetaris",
-        reasoningProvider: config.nemotron.provider,
-        configuredModelId: config.nemotron.modelId,
+        reasoningProvider: n.provider,
+        configuredModelId: n.provider === "meterless" ? `route:${n.runtimeRoute}` : n.modelId,
       },
     };
   }

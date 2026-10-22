@@ -31,7 +31,7 @@ Model output must (1) parse as JSON, (2) satisfy a strict Zod schema with a clos
 
 ## Truth and receipts
 
-Zetaris rows are normalized into M0 `TruthAssertion`s and persisted as immutable versions in `truth_assertions` (unchanged facts reuse their version; a changed fact becomes the next version; **no TruthRevision is created**, that is M2). Each DecisionReceipt's `truthRefs` are real `(assertionId, version)` references to those rows; `sourceId` is `zetaris` for LIVE and `MOCK:zetaris-fixture` for MOCK. Receipts record policy version, served model id, prompt/schema versions, chosen action, target, the model's structured justification, typed evidence (truth versions, policy, sandbox documents), trace id and timestamp. `memoryRefs` is `[]` (no memory was used).
+Zetaris rows are normalized into M0 `TruthAssertion`s and persisted as immutable versions in `truth_assertions` (unchanged facts reuse their version; a changed fact becomes the next version; **no TruthRevision is created**, that is M2). Each DecisionReceipt's `truthRefs` are real `(assertionId, version)` references to those rows; `sourceId` is `zetaris` for LIVE and `MOCK:zetaris-fixture` for MOCK. Receipts record policy version, the model id (the underlying model when demonstrated, otherwise `route:<runtimeRoute>`; a Meterless route id is never presented as a model), prompt/schema versions, chosen action, target, the model's structured justification, typed evidence (truth versions, policy, sandbox documents), trace id and timestamp. `memoryRefs` is `[]` (no memory was used).
 
 ## Mock vs live
 

@@ -12,71 +12,98 @@ import { runSuccessWorld } from "./run";
 import { createWorldRuntime, LiveNotConfiguredError } from "./runtime";
 import { getReceipt, readDemoState } from "./store";
 
-const SECRET = "sk-test-SECRET-DO-NOT-LEAK-123456";
+const RUNTIME_TOKEN = "mt-test-SECRET-DO-NOT-LEAK-111111";
 const ZETARIS_KEY = "zk-test-SECRET-DO-NOT-LEAK-654321";
+const SECRET = RUNTIME_TOKEN;
 
 const liveEnv = {
   BRINDLE_RUNTIME_MODE: "live",
   DATABASE_URL: "postgres://u:p@db.example.test:5432/brindle",
-  ZETARIS_BASE_URL: "https://tenant.example.test",
+  ZETARIS_REST_URL: "http://localhost:8888/api/v1.0",
   ZETARIS_API_KEY: ZETARIS_KEY,
   ZETARIS_ORG_ID: "7",
   ZETARIS_SCHEMA: "brindle_truth",
-  NEMOTRON_PROVIDER: "nvidia",
-  NEMOTRON_MODEL_ID: "nvidia/test-model",
-  NVIDIA_API_KEY: SECRET,
+  METERLESS_BASE_URL: "http://localhost:9000",
+  METERLESS_RUNTIME_TOKEN: RUNTIME_TOKEN,
+  METERLESS_MODEL: "meterless/auto",
 };
 
 describe("the real adapters drive the full world (protocol doubles at the HTTP edge)", () => {
-  it("runs end to end through RowBackedTruthReader + ZetarisSqlRowSource + OpenAiCompatibleNemotronReasoner", async () => {
+  async function drive(reportedModel: string | null) {
     const handle = await createEphemeralDb();
-    try {
-      const zSeen: Seen[] = [];
-      const nSeen: Seen[] = [];
-      const source = new ZetarisSqlRowSource({
-        baseUrl: "https://tenant.example.test",
-        apiKey: ZETARIS_KEY,
-        orgId: 7,
+    const zSeen: Seen[] = [];
+    const nSeen: Seen[] = [];
+    const source = new ZetarisSqlRowSource({
+      restUrl: "http://localhost:8888/api/v1.0",
+      apiKey: ZETARIS_KEY,
+      orgId: 7,
+      schema: "brindle_truth",
+      fetch: zetarisDouble(zSeen),
+    });
+    const reasoner = new OpenAiCompatibleNemotronReasoner({
+      route: {
+        provider: "meterless",
+        baseUrl: "http://localhost:9000",
+        runtimeToken: RUNTIME_TOKEN,
+        runtimeRoute: "meterless/auto",
+      },
+      fetch: chatDouble(nSeen, reportedModel),
+    });
+    const result = await runSuccessWorld({
+      db: handle.db,
+      truth: new RowBackedTruthReader(source, {
+        sourceId: "zetaris",
         schema: "brindle_truth",
-        fetch: zetarisDouble(zSeen),
-      });
-      const reasoner = new OpenAiCompatibleNemotronReasoner({
-        provider: "nvidia",
-        baseUrl: "https://nim.example.test/v1",
-        apiKey: SECRET,
-        modelId: "nvidia/test-model",
-        fetch: chatDouble(nSeen),
-      });
-      const result = await runSuccessWorld({
-        db: handle.db,
-        truth: new RowBackedTruthReader(source, {
-          sourceId: "zetaris",
-          schema: "brindle_truth",
-          now: () => FIXED_NOW,
-        }),
-        reasoner,
-        // Declared MOCK on purpose: the HTTP edge is a protocol double, so this must never be recorded as LIVE.
-        mode: "MOCK",
-        truthSourceId: "zetaris",
-        reasoningProvider: "nvidia",
-        configuredModelId: "nvidia/test-model",
         now: () => FIXED_NOW,
-      });
+      }),
+      reasoner,
+      // Declared MOCK on purpose: the HTTP edge is a protocol double, so this must never be recorded as LIVE.
+      mode: "MOCK",
+      truthSourceId: "zetaris",
+      reasoningProvider: "meterless",
+      configuredModelId: "route:meterless/auto",
+      now: () => FIXED_NOW,
+    });
+    return { handle, result, zSeen, nSeen };
+  }
+
+  it("runs end to end through Zetaris REST + Meterless runtime adapters and records route and model separately", async () => {
+    const { handle, result, zSeen, nSeen } = await drive("nvidia/nemotron-3-super");
+    try {
       expect(result.status).toBe("COMPLETED");
       expect(nSeen).toHaveLength(6);
-      expect(zSeen.some((s) => s.method === "POST")).toBe(true);
-
+      expect(nSeen.every((r) => r.url === "http://localhost:9000/v1/chat/completions")).toBe(true);
+      expect(zSeen.every((s) => s.url.endsWith("/sql-editor/sqls/run"))).toBe(true);
       const receipt = (await getReceipt(handle.db, "dec:PO-827:finance"))!;
-      expect(receipt.modelId).toBe("protocol-double-model");
+      expect(receipt.modelId).toBe("nvidia/nemotron-3-super");
+      const run = (await readDemoState(handle.db)).latestRun!;
+      expect(run).toMatchObject({
+        runtimeRoute: "meterless/auto",
+        underlyingModel: "nvidia/nemotron-3-super",
+      });
       const state = await readDemoState(handle.db);
       expect(state.purchaseOrders.map((p) => p.po.status)).toEqual([
         "RECEIVING_SCHEDULED",
         "RECEIVING_SCHEDULED",
       ]);
-      // Credentials appear nowhere in what was persisted.
-      expect(JSON.stringify(state)).not.toContain(SECRET);
-      expect(JSON.stringify(state)).not.toContain(ZETARIS_KEY);
-      expect(JSON.stringify(receipt)).not.toContain(SECRET);
+      for (const secret of [RUNTIME_TOKEN, ZETARIS_KEY]) {
+        expect(JSON.stringify(state)).not.toContain(secret);
+        expect(JSON.stringify(receipt)).not.toContain(secret);
+      }
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it("when the runtime reports only a route, receipts say route:<id> and the underlying model is unproven", async () => {
+    const { handle, result } = await drive("meterless/auto");
+    try {
+      expect(result.status).toBe("COMPLETED");
+      const receipt = (await getReceipt(handle.db, "dec:PO-827:procurement"))!;
+      expect(receipt.modelId).toBe("route:meterless/auto");
+      const run = (await readDemoState(handle.db)).latestRun!;
+      expect(run.runtimeRoute).toBe("meterless/auto");
+      expect(run.underlyingModel).toBeNull();
     } finally {
       await handle.close();
     }
@@ -113,8 +140,8 @@ describe("mock vs live separation", () => {
       expect(runtime.deps).toMatchObject({
         mode: "LIVE",
         truthSourceId: "zetaris",
-        reasoningProvider: "nvidia",
-        configuredModelId: "nvidia/test-model",
+        reasoningProvider: "meterless",
+        configuredModelId: "route:meterless/auto",
       });
       expect(runtime.handle.kind).toBe("postgres");
     } finally {
@@ -135,6 +162,54 @@ describe("mock vs live separation", () => {
       }),
     ).rejects.toBeInstanceOf(LiveNotConfiguredError);
     expect(() => loadConfig({ BRINDLE_RUNTIME_MODE: "live" })).toThrow(/ZETARIS/);
+  });
+
+  it("competition LIVE mode refuses to run without Meterless configuration", async () => {
+    const noMeterless = {
+      ...liveEnv,
+      METERLESS_BASE_URL: "",
+      METERLESS_RUNTIME_TOKEN: "",
+      METERLESS_MODEL: "",
+    };
+    expect(() => loadConfig(noMeterless)).toThrow(
+      /METERLESS_BASE_URL.*METERLESS_RUNTIME_TOKEN.*METERLESS_MODEL/s,
+    );
+    // Partial Meterless configuration is also refused.
+    expect(() => loadConfig({ ...liveEnv, METERLESS_MODEL: "" })).toThrow(/partially configured/);
+    // Having direct-NVIDIA credentials does not silently stand in for the primary runtime.
+    expect(() =>
+      loadConfig({ ...noMeterless, NVIDIA_API_KEY: "nv", NEMOTRON_MODEL_ID: "nvidia/nemotron-x" }),
+    ).toThrow(/Meterless Nightshift is the primary runtime/);
+    // The runtime itself also refuses (defence in depth) if handed such a config.
+    const base = loadConfig({ ...liveEnv, BRINDLE_RUNTIME_MODE: "local" });
+    await expect(
+      createWorldRuntime({
+        ...base,
+        runtimeMode: "live",
+        databaseUrl: "postgres://u:p@h.example.test/db",
+        meterless: { status: "unconfigured" },
+        nemotron: { status: "unconfigured" },
+      }),
+    ).rejects.toBeInstanceOf(LiveNotConfiguredError);
+  });
+
+  it("direct NVIDIA is secondary: explicit opt-in, Nemotron-family model only", () => {
+    const direct = {
+      ...liveEnv,
+      METERLESS_BASE_URL: "",
+      METERLESS_RUNTIME_TOKEN: "",
+      METERLESS_MODEL: "",
+      NEMOTRON_PROVIDER: "nvidia",
+      NVIDIA_API_KEY: "nv-secret",
+      NEMOTRON_MODEL_ID: "nvidia/nemotron-3-super",
+    };
+    expect(loadConfig(direct).nemotron).toMatchObject({
+      provider: "nvidia",
+      modelId: "nvidia/nemotron-3-super",
+    });
+    expect(() =>
+      loadConfig({ ...direct, NEMOTRON_MODEL_ID: "meta/llama-3.1-70b-instruct" }),
+    ).toThrow(/Nemotron-family/);
   });
 
   it("the live probe commands refuse to run without credentials", () => {
@@ -159,9 +234,10 @@ describe("mock vs live separation", () => {
 describe("no sponsor secret is exposed", () => {
   it("config summaries and error messages contain identifiers only", () => {
     const summary = JSON.stringify(summarizeConfig(loadConfig(liveEnv)));
-    for (const secret of [SECRET, ZETARIS_KEY, "db.example.test", "tenant.example.test"])
+    for (const secret of [SECRET, ZETARIS_KEY, "db.example.test"])
       expect(summary).not.toContain(secret);
-    expect(summary).toContain("nvidia/test-model");
+    expect(summary).toContain("meterless/auto"); // the route id is an identifier, not a secret
+    expect(summary).not.toContain("localhost:9000");
     try {
       loadConfig({ ...liveEnv, ZETARIS_ORG_ID: "not-a-number" });
       expect.unreachable();
