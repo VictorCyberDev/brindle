@@ -6,9 +6,12 @@ const liveEnv = {
   DATABASE_URL: "postgres://u:supersecretpw@db.example.com:5432/brindle",
   ZETARIS_BASE_URL: "https://zetaris.example.com",
   ZETARIS_API_KEY: "zk-secret-123",
-  METERLESS_BASE_URL: "https://meterless.example.com",
-  METERLESS_API_KEY: "mk-secret-456",
+  ZETARIS_ORG_ID: "7",
+  ZETARIS_SCHEMA: "brindle_truth",
+  NEMOTRON_PROVIDER: "meterless",
   NEMOTRON_MODEL_ID: "model-id",
+  METERLESS_BASE_URL: "https://meterless.example.com/v1",
+  METERLESS_API_KEY: "mk-secret-456",
 };
 
 describe("config validation", () => {
@@ -42,7 +45,7 @@ describe("config validation", () => {
     for (const name of [
       "DATABASE_URL",
       "ZETARIS_BASE_URL",
-      "METERLESS_BASE_URL",
+      "ZETARIS_SCHEMA",
       "NEMOTRON_MODEL_ID",
     ]) {
       expect(message).toContain(name);
@@ -67,7 +70,43 @@ describe("config validation", () => {
   it("accepts a complete live configuration", () => {
     const config = loadConfig(liveEnv);
     expect(config.runtimeMode).toBe("live");
-    expect(config.zetaris.status).toBe("configured");
+    expect(config.zetaris).toMatchObject({
+      status: "configured",
+      orgId: 7,
+      schema: "brindle_truth",
+    });
+    expect(config.nemotron).toMatchObject({
+      status: "configured",
+      provider: "meterless",
+      modelId: "model-id",
+    });
+  });
+
+  it("supports the direct NVIDIA route and requires its key", () => {
+    const nvidia = { ...liveEnv, NEMOTRON_PROVIDER: "nvidia", NVIDIA_API_KEY: "nv-secret-789" };
+    const config = loadConfig(nvidia);
+    expect(config.nemotron).toMatchObject({
+      provider: "nvidia",
+      baseUrl: "https://integrate.api.nvidia.com/v1",
+    });
+    expect(() => loadConfig({ ...nvidia, NVIDIA_API_KEY: "" })).toThrow(/NVIDIA_API_KEY/);
+    expect(() => loadConfig({ ...liveEnv, METERLESS_API_KEY: "" })).toThrow(/METERLESS/);
+  });
+
+  it("rejects partial Zetaris and partial Nemotron configuration", () => {
+    expect(() =>
+      loadConfig({ ZETARIS_BASE_URL: "https://z.example.com", ZETARIS_API_KEY: "k" }),
+    ).toThrow(/ZETARIS_ORG_ID/);
+    expect(() => loadConfig({ NEMOTRON_MODEL_ID: "m" })).toThrow(/NEMOTRON_PROVIDER/);
+    expect(() => loadConfig({ ZETARIS_SCHEMA: "bad schema;" })).toThrow(ConfigError);
+  });
+
+  it("derives provider mode only from the runtime mode, never from credentials", () => {
+    expect(summarizeConfig(loadConfig({})).providerMode).toBe("MOCK");
+    expect(
+      summarizeConfig(loadConfig({ ...liveEnv, BRINDLE_RUNTIME_MODE: "local" })).providerMode,
+    ).toBe("MOCK");
+    expect(summarizeConfig(loadConfig(liveEnv)).providerMode).toBe("LIVE");
   });
 
   it("never leaks secret values in summaries or error messages", () => {

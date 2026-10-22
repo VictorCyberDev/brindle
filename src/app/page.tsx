@@ -4,7 +4,11 @@ export default function HomePage() {
       <h1 className="text-4xl font-semibold tracking-tight">Brindle</h1>
       <p className="text-lg text-neutral-700">The Recovery Plane for AI Agents.</p>
       <p className="text-sm text-neutral-500">
-        Foundation milestone (M0). Service status: <code>/api/health</code>.
+        Service status: <code>/api/health</code>. Successful Agent World:{" "}
+        <a className="underline" href="/demo">
+          /demo
+        </a>
+        .
       </p>
     </main>
   );

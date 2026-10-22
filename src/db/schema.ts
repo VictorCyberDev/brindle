@@ -14,6 +14,7 @@ import {
   unique,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { PO_STATUSES } from "../brindle/business/sandbox";
 import { COUNTERFACTUAL_RESULTS } from "../brindle/counterfactual/assessment";
 import { CONSEQUENCE_EDGE_TYPES } from "../brindle/graph/edge";
 import { EFFECT_CLASSIFICATIONS } from "../brindle/graph/effect";
@@ -361,4 +362,107 @@ export const recoveryReceipts = pgTable(
       .on(t.incidentId)
       .where(sql`${t.verdict} = 'RECOVERED'`),
   ],
+);
+
+/*
+ * ===== SANDBOX BUSINESS SYSTEM (M1) =====
+ * These tables are Brindle's own deterministic sandbox, NOT enterprise truth
+ * (that lives in Zetaris) and NOT a production system. Rows are only written by
+ * the deterministic executors after an authorization gate has passed.
+ */
+export const poStatusEnum = pgEnum("po_status", PO_STATUSES);
+export const demoRunModeEnum = pgEnum("demo_run_mode", ["LIVE", "MOCK"]);
+export const demoRunStatusEnum = pgEnum("demo_run_status", ["COMPLETED", "BLOCKED", "FAILED"]);
+
+export const purchaseOrders = pgTable(
+  "purchase_orders",
+  {
+    id: text("id").primaryKey(),
+    supplierId: text("supplier_id").notNull(),
+    supplierName: text("supplier_name").notNull(),
+    description: text("description").notNull(),
+    amountCents: integer("amount_cents").notNull(),
+    currency: text("currency").notNull(),
+    status: poStatusEnum("status").notNull().default("CREATED"),
+    createdByDecisionId: text("created_by_decision_id")
+      .notNull()
+      .references(() => decisionReceipts.id),
+    placedAt: tstz("placed_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("purchase_orders_supplier_idx").on(t.supplierId),
+    check("purchase_orders_amount_chk", sql`${t.amountCents} > 0`),
+  ],
+);
+
+export const financeApprovals = pgTable("finance_approvals", {
+  id: text("id").primaryKey(),
+  poId: text("po_id")
+    .notNull()
+    .unique()
+    .references(() => purchaseOrders.id),
+  approvedAmountCents: integer("approved_amount_cents").notNull(),
+  currency: text("currency").notNull(),
+  decisionId: text("decision_id")
+    .notNull()
+    .references(() => decisionReceipts.id),
+  approvedAt: tstz("approved_at").notNull(),
+  createdAt: createdAt(),
+});
+
+export const receivingAllocations = pgTable("receiving_allocations", {
+  id: text("id").primaryKey(),
+  poId: text("po_id")
+    .notNull()
+    .unique()
+    .references(() => purchaseOrders.id),
+  dockId: text("dock_id").notNull(),
+  expectedArrival: tstz("expected_arrival").notNull(),
+  decisionId: text("decision_id")
+    .notNull()
+    .references(() => decisionReceipts.id),
+  allocatedAt: tstz("allocated_at").notNull(),
+  createdAt: createdAt(),
+});
+
+/** A sandbox record that the supplier "was notified". Nothing is ever transmitted. */
+export const supplierNotifications = pgTable(
+  "supplier_notifications",
+  {
+    id: text("id").primaryKey(),
+    poId: text("po_id")
+      .notNull()
+      .unique()
+      .references(() => purchaseOrders.id),
+    supplierId: text("supplier_id").notNull(),
+    channel: text("channel").notNull(),
+    subject: text("subject").notNull(),
+    decisionId: text("decision_id")
+      .notNull()
+      .references(() => decisionReceipts.id),
+    recordedAt: tstz("recorded_at").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [check("supplier_notifications_sandbox_chk", sql`${t.channel} = 'SANDBOX_RECORD'`)],
+);
+
+/** One row per orchestrated run: which mode and model produced the world, and how it ended. */
+export const demoRuns = pgTable(
+  "demo_runs",
+  {
+    id: text("id").primaryKey(),
+    mode: demoRunModeEnum("mode").notNull(),
+    status: demoRunStatusEnum("status").notNull(),
+    truthSourceId: text("truth_source_id").notNull(),
+    reasoningProvider: text("reasoning_provider").notNull(),
+    modelId: text("model_id").notNull(),
+    traceId: text("trace_id").notNull(),
+    startedAt: tstz("started_at").notNull(),
+    finishedAt: tstz("finished_at").notNull(),
+    /** Secret-free evidence: gate outcomes, provider request ids. */
+    detail: jsonb("detail").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index("demo_runs_started_idx").on(t.startedAt)],
 );

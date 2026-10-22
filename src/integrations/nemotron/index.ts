@@ -27,8 +27,13 @@ export interface ReasoningRequest<S extends z.ZodType> {
 
 export interface ReasoningResult<T> {
   output: T;
+  /** Model that actually served the request, as reported by the provider. */
   modelId: string;
   traceId: string;
+  /** Route used (e.g. "nvidia", "meterless"). Absent for test doubles. */
+  provider?: string;
+  /** Provider-side correlation id, if the provider exposes one. */
+  providerRequestId?: string | null;
 }
 
 export interface NemotronReasoner {

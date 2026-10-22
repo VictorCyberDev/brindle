@@ -5,8 +5,11 @@
 AI agents know how to act. Brindle gives them a way to recover when a previously valid decision
 becomes wrong because the underlying truth changes.
 
-> Status: **M0 — Foundation.** Contracts, schema, configuration, sponsor boundaries, CI and
-> docs. There is no procurement workflow, agent or demo yet. See [docs/MILESTONES.md](docs/MILESTONES.md).
+> Status: **M1 — Successful Agent World** (code complete; live sponsor acceptance pending).
+> A sandbox procurement world (PO-827 plus an unrelated control PO-901) runs end to end with
+> deterministic authorization and Decision Receipts. Recovery is not built yet. See
+> [docs/MILESTONES.md](docs/MILESTONES.md), [docs/M1_SUCCESSFUL_WORLD.md](docs/M1_SUCCESSFUL_WORLD.md) and
+> [docs/M1_SPONSOR_INTEGRATION.md](docs/M1_SPONSOR_INTEGRATION.md).
 
 ## The differentiating case
 
@@ -56,7 +59,8 @@ Requires Node.js ≥ 22.12.
 ```bash
 npm ci
 cp .env.example .env.local   # optional: local mode needs no credentials
-npm run dev                  # http://localhost:3000, health at /api/health
+npm run dev                  # http://localhost:3000, health at /api/health, demo at /demo
+npm run demo:m1              # run the M1 world in MOCK mode (no credentials)
 ```
 
 | Command                                   | Purpose                                                     |
@@ -86,5 +90,7 @@ src/brindle/        Deterministic domain core (no I/O, no sponsor or DB imports)
 src/integrations/   Sponsor boundary interfaces: zetaris/ meterless/ nemotron/
 src/db/             Drizzle schema + lazy client      drizzle/  generated migrations
 src/config/         Typed environment handling
-src/demo/           Reserved for M1+ (empty)
+src/demo/           M1 sandbox world: orchestrator, store, MOCK doubles, seed (no live code paths to mocks)
+scripts/            demo + live probe commands (never run in CI)
+data/zetaris-seed/  CSVs to provision Zetaris
 ```

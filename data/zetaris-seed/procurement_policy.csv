@@ -1,0 +1,2 @@
+policy_id,policy_version,required_certification_type,max_po_amount_cents,currency,effective_from
+POL-PROC-001,proc-policy-v1,ISO-9001,5000000,USD,2025-01-01T00:00:00Z
