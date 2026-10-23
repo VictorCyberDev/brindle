@@ -1,6 +1,9 @@
 import { getConfig, providerModeOf, summarizeConfig } from "../../config/env";
 import { getSharedRuntime } from "../../demo/runtime";
 import { readDemoState, type DemoState } from "../../demo/store";
+import { MaterialityPanel } from "./materiality-panel";
+import { readMateriality } from "../../services/materiality";
+import { ATLAS_REVISION_ID } from "../../demo/temporal";
 import { TemporalPanel } from "./temporal-panel";
 import { readTemporalDemo } from "../../demo/temporal";
 import { DemoControls } from "./controls";
@@ -51,6 +54,7 @@ function truthSummary(state: DemoState) {
 }
 
 export default async function DemoPage() {
+  let materiality: Awaited<ReturnType<typeof readMateriality>> | null = null;
   let temporal: Awaited<ReturnType<typeof readTemporalDemo>> = null;
   let state: DemoState | null = null;
   let error: string | null = null;
@@ -63,6 +67,7 @@ export default async function DemoPage() {
     const db = (await getSharedRuntime(config)).deps.db;
     state = await readDemoState(db);
     temporal = await readTemporalDemo(db);
+    if (temporal) materiality = await readMateriality(db, ATLAS_REVISION_ID);
   } catch (e) {
     error = e instanceof Error ? `${e.name}: ${e.message}` : "unknown error";
   }
@@ -212,6 +217,7 @@ export default async function DemoPage() {
         </>
       )}
       <TemporalPanel data={temporal} />
+      <MaterialityPanel data={materiality} />
     </main>
   );
 }
