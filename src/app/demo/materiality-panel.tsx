@@ -2,6 +2,12 @@ import type { readMateriality } from "../../services/materiality";
 function actionLabel(action: { actionType: string; parameters: unknown }) {
   return action.actionType.replaceAll("_", " ");
 }
+function factLabel(value: unknown): string {
+  if (value !== null && typeof value === "object" && "status" in value) return String(value.status);
+  return typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+    ? String(value)
+    : "see referenced fact";
+}
 export function MaterialityPanel({
   data,
 }: {
@@ -45,7 +51,9 @@ export function MaterialityPanel({
                 <p>Original: {actionLabel(v.originalAction)}</p>
                 <p>
                   Corrected fact: {v.correctedFact?.factKey ?? "historical evidence unavailable"}
-                  {v.correctedFact ? ` v${v.correctedFact.version}` : ""}
+                  {v.correctedFact
+                    ? ` v${v.correctedFact.version} · ${factLabel(v.correctedFact.value)}`
+                    : ""}
                 </p>
                 {v.assessment.result === "CHANGED" ? (
                   <p>Counterfactual: {actionLabel(v.assessment.counterfactualAction)}</p>
