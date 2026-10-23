@@ -15,6 +15,13 @@
       "when": 1792678088827,
       "tag": "0001_sandbox_business",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792799145799,
+      "tag": "0002_recovery_evidence",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Milestones
 
-**M0** is merged. **M1 CODE** is PASS; LIVE sponsor acceptance is deferred and mandatory before submission. **M2** is GUIDE PASS at `cfc2e4b2535ce599c22672f98089ac65826c09c1`. **M3** is implemented pending full gates and overnight self-progression; not GUIDE accepted. M4–M6 have not started on this branch.
+**M0** is merged. **M1 CODE** is PASS; LIVE sponsor acceptance is deferred and mandatory before submission. **M2** is GUIDE PASS at `cfc2e4b2535ce599c22672f98089ac65826c09c1`. **M3** passed overnight self-progression at `739171de99dd57ecaad0f3a6a6eab892b93029c9`; not GUIDE accepted. **M4** is implemented pending full gates and self-progression. M5–M6 have not started on this branch.
 
 | Milestone | Name                       | Scope                                                                                                                                                                                                                                                                                                                                    |
 | --------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

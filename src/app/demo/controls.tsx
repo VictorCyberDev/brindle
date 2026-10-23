@@ -63,6 +63,22 @@ export function DemoControls() {
       >
         Assess materiality
       </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/recovery-plan", "Plan recovery")}
+        data-testid="plan-recovery"
+      >
+        Plan recovery
+      </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/execute-recovery", "Execute sandbox recovery")}
+        data-testid="execute-recovery"
+      >
+        Execute sandbox recovery
+      </button>
       {busy ? <span className="text-sm text-neutral-500">{busy}…</span> : null}
       {message ? (
         <span className="text-sm text-neutral-700" data-testid="control-message">

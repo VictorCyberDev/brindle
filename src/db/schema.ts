@@ -466,3 +466,33 @@ export const demoRuns = pgTable(
   },
   (t) => [index("demo_runs_started_idx").on(t.startedAt)],
 );
+
+/** Durable plan, execution and corrective-remediation evidence. No executor response is closure proof. */
+export const recoveryEvidence = pgTable(
+  "recovery_evidence",
+  {
+    id: text("id").primaryKey(),
+    incidentId: text("incident_id")
+      .notNull()
+      .references(() => incidents.id),
+    stepId: text("step_id").references(() => recoverySteps.id),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload").notNull(),
+    recordedAt: tstz("recorded_at").notNull(),
+  },
+  (t) => [
+    index("recovery_evidence_incident_idx").on(t.incidentId),
+    index("recovery_evidence_step_idx").on(t.stepId),
+    uniqueIndex("recovery_evidence_one_execution_uq")
+      .on(t.stepId)
+      .where(sql`${t.kind} IN ('EXECUTION', 'REMEDIATION')`),
+    uniqueIndex("recovery_evidence_one_plan_uq")
+      .on(t.incidentId)
+      .where(sql`${t.kind} = 'PLAN'`),
+    check(
+      "recovery_evidence_kind_chk",
+      sql`${t.kind} IN ('PLAN', 'EXECUTION', 'FAILURE', 'REMEDIATION')`,
+    ),
+    check("recovery_evidence_step_chk", sql`(${t.kind} = 'PLAN') = (${t.stepId} IS NULL)`),
+  ],
+);
