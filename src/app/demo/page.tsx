@@ -1,6 +1,8 @@
 import { getConfig, providerModeOf, summarizeConfig } from "../../config/env";
 import { getSharedRuntime } from "../../demo/runtime";
 import { readDemoState, type DemoState } from "../../demo/store";
+import { RecoveryPanel } from "./recovery-panel";
+import { readRecovery } from "../../services/recovery";
 import { MaterialityPanel } from "./materiality-panel";
 import { readMateriality } from "../../services/materiality";
 import { ATLAS_REVISION_ID } from "../../demo/temporal";
@@ -54,6 +56,7 @@ function truthSummary(state: DemoState) {
 }
 
 export default async function DemoPage() {
+  let recovery: Awaited<ReturnType<typeof readRecovery>> = null;
   let materiality: Awaited<ReturnType<typeof readMateriality>> | null = null;
   let temporal: Awaited<ReturnType<typeof readTemporalDemo>> = null;
   let state: DemoState | null = null;
@@ -67,7 +70,10 @@ export default async function DemoPage() {
     const db = (await getSharedRuntime(config)).deps.db;
     state = await readDemoState(db);
     temporal = await readTemporalDemo(db);
-    if (temporal) materiality = await readMateriality(db, ATLAS_REVISION_ID);
+    if (temporal) {
+      materiality = await readMateriality(db, ATLAS_REVISION_ID);
+      recovery = await readRecovery(db, ATLAS_REVISION_ID);
+    }
   } catch (e) {
     error = e instanceof Error ? `${e.name}: ${e.message}` : "unknown error";
   }
@@ -218,6 +224,7 @@ export default async function DemoPage() {
       )}
       <TemporalPanel data={temporal} />
       <MaterialityPanel data={materiality} />
+      <RecoveryPanel data={recovery} />
     </main>
   );
 }

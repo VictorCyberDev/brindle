@@ -5,7 +5,7 @@ import { idSchema, isoTimestampSchema } from "../common/schemas";
  * SANDBOX BUSINESS SYSTEM. These records live in Brindle's own PostgreSQL
  * tables. Nothing here is a real purchase order, payment or email.
  */
-export const PO_STATUSES = ["CREATED", "APPROVED", "RECEIVING_SCHEDULED"] as const;
+export const PO_STATUSES = ["CREATED", "APPROVED", "RECEIVING_SCHEDULED", "CANCELLED"] as const;
 export const poStatusSchema = z.enum(PO_STATUSES);
 export type PoStatus = z.infer<typeof poStatusSchema>;
 

@@ -103,3 +103,30 @@ test("M3 assesses materiality without recovering or touching the unrelated contr
   expect(repeat.status()).toBe(200);
   expect((await repeat.json()).result.examined).toBe(3);
 });
+
+test("M4 plans four bounded steps and executes without claiming recovery proof", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/demo");
+  await page.getByTestId("plan-recovery").click();
+  await expect(page.getByTestId("recovery-state")).toHaveText("RECOVERY_PLANNED");
+  await expect(page.getByTestId("recovery-step-count")).toHaveText("4 bounded steps");
+  await page.getByTestId("execute-recovery").click();
+  await expect(page.getByTestId("recovery-state")).toHaveText("VERIFYING");
+  await expect(
+    page.getByText(
+      "Recovery executed. Independent verification is still required. Executor success is not recovery proof.",
+    ),
+  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "RECOVERY PROVEN", exact: true })).toHaveCount(0);
+  const retry = await request.post("/api/demo/execute-recovery");
+  expect(retry.status()).toBe(200);
+  const body = await retry.json();
+  expect(
+    body.result.evidence.filter((e: { kind: string }) =>
+      ["EXECUTION", "REMEDIATION"].includes(e.kind),
+    ),
+  ).toHaveLength(4);
+  expect(body.result.incident.closure).toBeNull();
+});
