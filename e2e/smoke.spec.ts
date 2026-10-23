@@ -87,3 +87,19 @@ test("M2 sandbox revision reveals candidates and preserves the unrelated control
   expect(body.result.candidates).toHaveLength(10);
   expect(JSON.stringify(body)).not.toMatch(/api[_-]?key|secret|bearer|postgres:\/\//i);
 });
+
+test("M3 assesses materiality without recovering or touching the unrelated control", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/demo");
+  await page.getByTestId("assess-materiality").click();
+  await expect(page.getByTestId("control-message")).toContainText("MATERIALITY_ASSESSED");
+  await expect(page.getByTestId("materiality-counts")).toContainText(
+    "3 examined · 1 SAME / PRESERVE · 2 CHANGED · 0 UNCERTAIN",
+  );
+  await expect(page.getByText("What would actually have differed?")).toBeVisible();
+  const repeat = await request.post("/api/demo/assess-materiality");
+  expect(repeat.status()).toBe(200);
+  expect((await repeat.json()).result.examined).toBe(3);
+});

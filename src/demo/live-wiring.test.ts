@@ -215,7 +215,7 @@ describe("mock vs live separation", () => {
 
   it("the live probe commands refuse to run without credentials", () => {
     const run = (script: string) =>
-      spawnSync("npx", ["tsx", script], {
+      spawnSync(process.execPath, ["--import", "tsx", script], {
         env: {
           PATH: process.env.PATH ?? "",
           HOME: process.env.HOME ?? "",

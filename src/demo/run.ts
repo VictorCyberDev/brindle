@@ -116,7 +116,7 @@ interface EvidenceBundle {
   ids: string[];
 }
 
-function buildEvidence(
+export function buildEvidence(
   truth: readonly TruthAssertion[],
   policy: ProcurementPolicyValue,
   documents: { evidenceId: string; documentId: string; summary: string }[] = [],
@@ -208,8 +208,10 @@ const OPERATIONS = {
     "Set target to the PO id. Cite evidence ids in rationale.factors. Set confidence between 0 and 1.",
 } as const satisfies ActorSpec<typeof operationsProposalSchema>;
 
+export const M1_ACTOR_SPECS = { PROCUREMENT, FINANCE, OPERATIONS } as const;
+
 /** Asks the model for a proposal. Anything that is not a schema-valid proposal citing only shown evidence is a Blocked outcome. */
-async function propose<
+export async function propose<
   S extends z.ZodType<{
     decision: string;
     target: string;
@@ -217,7 +219,7 @@ async function propose<
     confidence: number;
   }>,
 >(
-  deps: WorldDeps,
+  deps: Pick<WorldDeps, "reasoner">,
   spec: ActorSpec<S>,
   poId: string,
   traceId: string,

@@ -55,6 +55,14 @@ export function DemoControls() {
       >
         Inject truth revision
       </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/assess-materiality", "Assess materiality")}
+        data-testid="assess-materiality"
+      >
+        Assess materiality
+      </button>
       {busy ? <span className="text-sm text-neutral-500">{busy}…</span> : null}
       {message ? (
         <span className="text-sm text-neutral-700" data-testid="control-message">
