@@ -1,1 +1,119 @@
 @import "tailwindcss";
+
+:root {
+  --brindle-obsidian: #0c1110;
+  --brindle-bone: #f4f0e8;
+  --brindle-copper: #c96a4b;
+  --brindle-mint: #4ed6a0;
+  --brindle-gold: #e6b85c;
+  --brindle-critical: #ff5c57;
+  --brindle-muted: #8e9893;
+  --brindle-ui: "IBM Plex Sans", Arial, sans-serif;
+  --brindle-display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
+  --brindle-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+.temporal-room {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: var(--brindle-obsidian);
+  color: var(--brindle-bone);
+  font-family: var(--brindle-ui);
+}
+.temporal-room h2 {
+  font: 2rem var(--brindle-display);
+  margin: 1rem 0;
+}
+.temporal-room h3 {
+  font: 1.3rem var(--brindle-display);
+  margin: 2rem 0 1rem;
+}
+.temporal-room p {
+  margin: 0.75rem 0;
+}
+.temporal-room code,
+.evidence-list dd {
+  font-family: var(--brindle-mono);
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+.eyebrow {
+  color: var(--brindle-muted);
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+}
+.candidate-notice {
+  border: 1px solid var(--brindle-gold);
+  padding: 1rem;
+}
+.revision-seam {
+  border-top: 2px dashed var(--brindle-copper);
+  border-bottom: 2px solid var(--brindle-copper);
+  margin: 2rem 0;
+}
+.beliefs {
+  font: 2rem var(--brindle-display);
+}
+.evidence-list {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 0.75rem;
+  padding-bottom: 1rem;
+}
+.truth-ref {
+  display: contents;
+}
+.badge {
+  color: var(--brindle-gold);
+  font: 0.7rem var(--brindle-mono);
+  display: inline-block;
+}
+.consequence-map {
+  display: grid;
+  gap: 1rem;
+}
+.candidate-path {
+  border-left: 2px dashed var(--brindle-gold);
+  padding: 0.75rem 1rem;
+}
+.candidate-path strong,
+.candidate-path code {
+  display: block;
+}
+.control-path {
+  border-left: 2px solid var(--brindle-muted);
+  padding: 1rem;
+  margin: 1.5rem 0;
+}
+.temporal-room summary {
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+.temporal-room details li {
+  margin: 0.5rem 0;
+  overflow-wrap: anywhere;
+}
+.seam-button {
+  border: 1px solid var(--brindle-copper);
+  border-top-style: dashed;
+  padding: 0.4rem 0.75rem;
+  font-family: var(--brindle-ui);
+}
+.seam-button:disabled {
+  opacity: 0.5;
+}
+.seam-button:focus-visible,
+.temporal-room summary:focus-visible {
+  outline: 2px solid var(--brindle-gold);
+  outline-offset: 3px;
+}
+@media (max-width: 540px) {
+  .temporal-room {
+    padding: 1rem;
+  }
+  .evidence-list {
+    grid-template-columns: 1fr;
+  }
+  .evidence-list dd {
+    margin-bottom: 0.75rem;
+  }
+}

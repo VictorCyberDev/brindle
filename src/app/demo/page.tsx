@@ -1,6 +1,8 @@
 import { getConfig, providerModeOf, summarizeConfig } from "../../config/env";
 import { getSharedRuntime } from "../../demo/runtime";
 import { readDemoState, type DemoState } from "../../demo/store";
+import { TemporalPanel } from "./temporal-panel";
+import { readTemporalDemo } from "../../demo/temporal";
 import { DemoControls } from "./controls";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +51,7 @@ function truthSummary(state: DemoState) {
 }
 
 export default async function DemoPage() {
+  let temporal: Awaited<ReturnType<typeof readTemporalDemo>> = null;
   let state: DemoState | null = null;
   let error: string | null = null;
   let mode: "LIVE" | "MOCK" = "MOCK";
@@ -57,7 +60,9 @@ export default async function DemoPage() {
     const config = getConfig();
     mode = providerModeOf(config);
     reasoning = summarizeConfig(config).reasoning;
-    state = await readDemoState((await getSharedRuntime(config)).deps.db);
+    const db = (await getSharedRuntime(config)).deps.db;
+    state = await readDemoState(db);
+    temporal = await readTemporalDemo(db);
   } catch (e) {
     error = e instanceof Error ? `${e.name}: ${e.message}` : "unknown error";
   }
@@ -206,6 +211,7 @@ export default async function DemoPage() {
           </section>
         </>
       )}
+      <TemporalPanel data={temporal} />
     </main>
   );
 }

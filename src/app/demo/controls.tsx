@@ -47,6 +47,14 @@ export function DemoControls() {
       >
         Reset sandbox
       </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/revise-truth", "Inject sandbox truth revision")}
+        data-testid="inject-revision"
+      >
+        Inject truth revision
+      </button>
       {busy ? <span className="text-sm text-neutral-500">{busy}…</span> : null}
       {message ? (
         <span className="text-sm text-neutral-700" data-testid="control-message">
