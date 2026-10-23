@@ -69,6 +69,26 @@ async function prepare(same = false) {
   return planRecovery(db(), rev, actor);
 }
 describe("M4 / closed deterministic sandbox recovery", () => {
+  it("conflicting persisted effect evidence is rejected before plan commit", async () => {
+    await injectAtlasRevision(db());
+    await assessCandidates(world.deps, rev);
+    await db()
+      .insert(t.effects)
+      .values({
+        id: "effect:purchase_order:PO-827",
+        actionNodeId: "ACTION:dec:PO-827:procurement",
+        classification: "REVERSIBLE",
+        targetType: "purchase_order",
+        targetId: "PO-827",
+        description: "conflicting provenance",
+        ruleId: "unrecognized-rule",
+        occurredAt: new Date("2026-10-22T12:00:00Z"),
+      });
+    await expect(planRecovery(db(), rev, actor)).rejects.toThrow("IMMUTABLE_EFFECT_CONFLICT");
+    expect(await db().select().from(t.recoverySteps)).toHaveLength(0);
+    expect(await db().select().from(t.incidents)).toHaveLength(0);
+  });
+
   it("persists four rule-classified effects and a stable dependency-respecting minimal set", async () => {
     const p = await prepare();
     expect(p.effects.map((e) => e.classification).sort()).toEqual([

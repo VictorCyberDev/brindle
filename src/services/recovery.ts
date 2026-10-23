@@ -434,6 +434,12 @@ export async function planRecovery(db: Db, revisionId: string, actor: RecoveryAc
             occurredAt: new Date(e.occurredAt),
           })
           .onConflictDoNothing();
+        const [persistedEffect] = await tx
+          .select()
+          .from(t.effects)
+          .where(eq(t.effects.id, e.effectId));
+        if (!persistedEffect || canonical(effectFromRow(persistedEffect)) !== canonical(e))
+          throw new Error("IMMUTABLE_EFFECT_CONFLICT");
         await tx.insert(t.recoverySteps).values({
           id: step.stepId,
           incidentId: id,
