@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+// The M2 transition deliberately appends history to the same sandbox used by M1.
+test.describe.configure({ mode: "serial" });
+
 test("health endpoint reports ok in local mode", async ({ request }) => {
   const res = await request.get("/api/health");
   expect(res.status()).toBe(200);
@@ -55,4 +58,32 @@ test.describe("M1 demo shell (MOCK mode, in-process PostgreSQL)", () => {
     expect(state.state.purchaseOrders).toHaveLength(2);
     expect(JSON.stringify(state)).not.toMatch(/api[_-]?key|secret|bearer|postgres:\/\//i);
   });
+});
+
+test("M2 sandbox revision reveals candidates and preserves the unrelated control", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/demo");
+  await page.getByTestId("run-success").click();
+  await expect(page.getByTestId("control-message")).toContainText("HTTP 200");
+  await page.getByTestId("inject-revision").click();
+  await expect(page.getByTestId("control-message")).toContainText("CANDIDATES_READY");
+  await expect(page.getByText("RETROACTIVE", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("candidate-count")).toHaveText("10");
+  await expect(page.getByTestId("consequence-map")).toContainText("PO-827");
+  await expect(page.getByTestId("consequence-map")).not.toContainText("PO-901");
+  await expect(page.getByTestId("temporal-control")).toContainText(
+    "Outside Atlas candidate blast radius",
+  );
+  await expect(
+    page.getByText(
+      "M2 identifies candidates for review. Materiality has not been evaluated. No recovery has run.",
+    ),
+  ).toBeVisible();
+  const again = await request.post("/api/demo/revise-truth");
+  expect(again.status()).toBe(200);
+  const body = await again.json();
+  expect(body.result.candidates).toHaveLength(10);
+  expect(JSON.stringify(body)).not.toMatch(/api[_-]?key|secret|bearer|postgres:\/\//i);
 });
