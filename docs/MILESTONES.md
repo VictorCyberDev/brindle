@@ -1,6 +1,6 @@
 # Milestones
 
-**M0** is merged. **M1 CODE** is PASS; LIVE sponsor acceptance is deferred and mandatory before submission. **M2** is GUIDE PASS at `cfc2e4b2535ce599c22672f98089ac65826c09c1`. **M3** passed overnight self-progression at `739171de99dd57ecaad0f3a6a6eab892b93029c9`; not GUIDE accepted. **M4** is implemented pending full gates and self-progression. M5–M6 have not started on this branch.
+**M0** is merged. **M1 CODE** is PASS; LIVE sponsor acceptance is deferred and mandatory before submission. **M2** is GUIDE PASS at `cfc2e4b2535ce599c22672f98089ac65826c09c1`. **M3** passed overnight self-progression at `739171de99dd57ecaad0f3a6a6eab892b93029c9`. **M4** passed overnight self-progression at `3ec841fd4061f7078f95829b3c79bf97848894c7`. **M5** core proof and actual local H-MEM engine are implemented; exact-head final gate evidence is recorded in the M5 PR. GUIDE review remains pending. M3–M5 are not GUIDE accepted. **M6 is NOT STARTED / NOT AUTHORIZED.**
 
 | Milestone | Name                       | Scope                                                                                                                                                                                                                                                                                                                                    |
 | --------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,3 +36,11 @@ Until then, nothing in M1-M4 may be described as meeting the Meterless Engine re
 | NVIDIA               | Provider configured inside Nightshift (direct API secondary only) |
 | Nemotron             | Required reasoning model behind the accepted LIVE demo            |
 | H-MEM                | Mandatory M5 Meterless Engine integration                         |
+
+## M5 evidence boundary
+
+The official H-MEM source is a local implementation spec with a runnable reference, not an assumed
+hosted API. M5's actual local engine passes the pinned 13-case conformance suite and a PostgreSQL
+restart/retrieval probe; see `M5_HMEM_RECOVERY_MEMORY.md`. This does not satisfy real Zetaris or
+Nightshift/Nemotron LIVE acceptance and is not an overall eligibility claim. No milestone is GUIDE
+accepted merely because overnight implementation/self-progression gates pass.

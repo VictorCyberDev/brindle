@@ -496,3 +496,27 @@ export const recoveryEvidence = pgTable(
     check("recovery_evidence_step_chk", sql`(${t.kind} = 'PLAN') = (${t.stepId} IS NULL)`),
   ],
 );
+
+/** H-MEM canonical state snapshot; PostgreSQL is authoritative, never a second memory database. */
+export const hmemState = pgTable("hmem_state", {
+  id: text("id").primaryKey(),
+  upstreamSha: text("upstream_sha").notNull(),
+  payload: jsonb("payload").notNull(),
+  updatedAt: tstz("updated_at").notNull(),
+});
+/** Append-only H-MEM trust ledger, committed atomically with canonical state changes. */
+export const hmemLedger = pgTable(
+  "hmem_ledger",
+  {
+    id: text("id").primaryKey(),
+    ordinal: integer("ordinal").notNull().unique(),
+    memoryId: text("memory_id").notNull(),
+    action: text("action").notNull(),
+    payload: jsonb("payload").notNull(),
+    recordedAt: tstz("recorded_at").notNull(),
+  },
+  (t) => [
+    index("hmem_ledger_memory_idx").on(t.memoryId),
+    index("hmem_ledger_time_idx").on(t.recordedAt),
+  ],
+);

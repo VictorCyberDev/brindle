@@ -25,7 +25,9 @@
     "live:zetaris": "tsx --env-file-if-exists=.env.local scripts/live/zetaris.mts",
     "live:nemotron": "tsx --env-file-if-exists=.env.local scripts/live/nemotron.mts",
     "live": "tsx --env-file-if-exists=.env.local scripts/live/all.mts",
-    "zetaris:seed-csv": "tsx --env-file-if-exists=.env.local scripts/zetaris-seed-csv.mts"
+    "zetaris:seed-csv": "tsx --env-file-if-exists=.env.local scripts/zetaris-seed-csv.mts",
+    "hmem:conformance": "node --import tsx scripts/hmem-conformance/run.mts",
+    "hmem:probe": "node --import tsx scripts/hmem-probe.mts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.4",

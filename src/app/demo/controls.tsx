@@ -79,6 +79,22 @@ export function DemoControls() {
       >
         Execute sandbox recovery
       </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/verify-recovery", "Verify independently")}
+        data-testid="verify-recovery"
+      >
+        Verify independently
+      </button>
+      <button
+        className="seam-button"
+        disabled={busy !== null}
+        onClick={() => post("/api/demo/recall-memory", "Recall verified pattern")}
+        data-testid="recall-memory"
+      >
+        Recall verified pattern
+      </button>
       {busy ? <span className="text-sm text-neutral-500">{busy}…</span> : null}
       {message ? (
         <span className="text-sm text-neutral-700" data-testid="control-message">

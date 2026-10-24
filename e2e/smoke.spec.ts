@@ -130,3 +130,33 @@ test("M4 plans four bounded steps and executes without claiming recovery proof",
   ).toHaveLength(4);
   expect(body.result.incident.closure).toBeNull();
 });
+
+test("M5 independently verifies, closes with real proof, and exercises actual H-MEM recall", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/demo");
+  await expect(page.getByRole("heading", { name: "Brindle Control Room" })).toBeVisible();
+  await page.getByTestId("verify-recovery").click();
+  await expect(page.getByRole("heading", { name: "RECOVERY PROVEN", exact: true })).toBeVisible();
+  await expect(page.getByTestId("proof-strip")).toContainText("RECOVERY VERIFIED");
+  await expect(page.getByTestId("proof-metrics")).toContainText("0 residual invariant violations");
+  await expect(page.getByTestId("memory-records")).toContainText("1 verified recovery patterns");
+  await page.getByTestId("recall-memory").click();
+  await expect(page.getByTestId("memory-match-count")).toHaveText("1 relevant verified matches");
+  await expect(page.getByText("Verified recovery found", { exact: true })).toBeVisible();
+  const repeat = await request.post("/api/demo/verify-recovery");
+  expect(repeat.status()).toBe(200);
+  const body = await repeat.json();
+  expect(body.result.receipt.verdict).toBe("RECOVERED");
+  expect(body.result.receipts).toHaveLength(1);
+  expect(body.memory.status).toBe("ACTUAL_HMEM_RECORDED");
+  expect(JSON.stringify(body)).not.toMatch(/api[_-]?key|secret|bearer|postgres:\/\//i);
+  const download = await request.get("/api/demo/recovery-receipt");
+  expect(download.status()).toBe(200);
+  expect((await download.json()).receiptId).toBe(body.result.receipt.receiptId);
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+});

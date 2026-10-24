@@ -1,6 +1,9 @@
 import { getConfig, providerModeOf, summarizeConfig } from "../../config/env";
 import { getSharedRuntime } from "../../demo/runtime";
 import { readDemoState, type DemoState } from "../../demo/store";
+import { ProofPanel } from "./proof-panel";
+import { readProof } from "../../services/verification";
+import { readRecoveryMemory } from "../../services/recovery-memory";
 import { RecoveryPanel } from "./recovery-panel";
 import { readRecovery } from "../../services/recovery";
 import { MaterialityPanel } from "./materiality-panel";
@@ -56,6 +59,8 @@ function truthSummary(state: DemoState) {
 }
 
 export default async function DemoPage() {
+  let proof: Awaited<ReturnType<typeof readProof>> | null = null;
+  let memory: Awaited<ReturnType<typeof readRecoveryMemory>> | null = null;
   let recovery: Awaited<ReturnType<typeof readRecovery>> = null;
   let materiality: Awaited<ReturnType<typeof readMateriality>> | null = null;
   let temporal: Awaited<ReturnType<typeof readTemporalDemo>> = null;
@@ -70,9 +75,11 @@ export default async function DemoPage() {
     const db = (await getSharedRuntime(config)).deps.db;
     state = await readDemoState(db);
     temporal = await readTemporalDemo(db);
+    memory = await readRecoveryMemory(db);
     if (temporal) {
       materiality = await readMateriality(db, ATLAS_REVISION_ID);
       recovery = await readRecovery(db, ATLAS_REVISION_ID);
+      proof = await readProof(db, ATLAS_REVISION_ID);
     }
   } catch (e) {
     error = e instanceof Error ? `${e.name}: ${e.message}` : "unknown error";
@@ -92,13 +99,22 @@ export default async function DemoPage() {
     : "—";
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-10">
+    <main className="control-room mx-auto max-w-5xl px-6 py-10">
       <header className="mb-6">
         <p className="text-xs font-semibold tracking-widest text-neutral-500">BRINDLE</p>
-        <h1 className="text-3xl font-semibold tracking-tight">Successful Agent World</h1>
-        <p className="mt-1 text-sm text-neutral-600">The world before anything goes wrong.</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Brindle Control Room</h1>
+        <p className="mt-1 text-sm text-neutral-600">
+          Truth changes. Consequences are traced. Recovery is independently proven.
+        </p>
       </header>
 
+      <ProofPanel
+        proof={proof}
+        memory={memory}
+        temporal={temporal}
+        materiality={materiality}
+        recovery={recovery}
+      />
       <div
         data-testid="provider-banner"
         data-mode={shownMode}
@@ -134,92 +150,107 @@ export default async function DemoPage() {
             <DemoControls />
           </section>
 
-          <section className="mb-6">
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Truth
-            </h2>
-            <dl>
-              <Row label="Supplier" value={truth!.name} testId="truth-supplier" />
-              <Row label="Enabled" value={truth!.enabled ? "YES" : "—"} testId="truth-enabled" />
-              <Row label="Certification (ISO-9001)" value={truth!.certStatus} testId="truth-cert" />
-              <Row label="Valid interval" value={truth!.interval} testId="truth-interval" />
-              <Row
-                label="Truth source"
-                value={truth!.sourceId}
-                testId="truth-source"
-                tone="muted"
-              />
-            </dl>
-          </section>
+          <details className="legacy-world" open={!recovery}>
+            <summary>
+              <h2>Successful Agent World</h2>
+            </summary>
+            <section className="mb-6">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Truth
+              </h2>
+              <dl>
+                <Row label="Supplier" value={truth!.name} testId="truth-supplier" />
+                <Row label="Enabled" value={truth!.enabled ? "YES" : "—"} testId="truth-enabled" />
+                <Row
+                  label="Certification (ISO-9001)"
+                  value={truth!.certStatus}
+                  testId="truth-cert"
+                />
+                <Row label="Valid interval" value={truth!.interval} testId="truth-interval" />
+                <Row
+                  label="Truth source"
+                  value={truth!.sourceId}
+                  testId="truth-source"
+                  tone="muted"
+                />
+              </dl>
+            </section>
 
-          <section className="mb-6">
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              PO-827 · Atlas Components
-            </h2>
-            <dl>
-              <Row label="Procurement" value={atlasPo ? "SELECTED" : "—"} testId="procurement" />
-              <Row label="PO-827" value={atlasPo ? "CREATED" : "—"} testId="po-created" />
-              <Row label="Finance" value={atlasPo?.approval ? "APPROVED" : "—"} testId="finance" />
-              <Row
-                label="Operations"
-                value={atlasPo?.allocation ? "RECEIVING SCHEDULED" : "—"}
-                testId="operations"
-              />
-              <Row
-                label="Supplier notification"
-                value={atlasPo?.notification ? "RECORDED — SANDBOX" : "—"}
-                testId="notification"
-              />
-              <Row
-                label="Decision Receipts"
-                value={String(atlasPo?.decisionReceiptCount ?? 0)}
-                testId="receipts-827"
-              />
-            </dl>
-          </section>
+            <section className="mb-6">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                PO-827 · Atlas Components
+              </h2>
+              <dl>
+                <Row label="Procurement" value={atlasPo ? "SELECTED" : "—"} testId="procurement" />
+                <Row label="PO-827" value={atlasPo ? "CREATED" : "—"} testId="po-created" />
+                <Row
+                  label="Finance"
+                  value={atlasPo?.approval ? "APPROVED" : "—"}
+                  testId="finance"
+                />
+                <Row
+                  label="Operations"
+                  value={atlasPo?.allocation ? "RECEIVING SCHEDULED" : "—"}
+                  testId="operations"
+                />
+                <Row
+                  label="Supplier notification"
+                  value={atlasPo?.notification ? "RECORDED — SANDBOX" : "—"}
+                  testId="notification"
+                />
+                <Row
+                  label="Decision Receipts"
+                  value={String(atlasPo?.decisionReceiptCount ?? 0)}
+                  testId="receipts-827"
+                />
+              </dl>
+            </section>
 
-          <section className="mb-6">
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              PO-901 · Control (unrelated to Atlas)
-            </h2>
-            <dl>
-              <Row
-                label="PO-901"
-                value={
-                  controlPo ? `${controlPo.po.status.replace("_", " ")} — CONTROL / UNRELATED` : "—"
-                }
-                testId="control"
-              />
-              <Row
-                label="Supplier"
-                value={controlPo?.po.supplierName ?? "—"}
-                testId="control-supplier"
-              />
-              <Row
-                label="Decision Receipts"
-                value={String(controlPo?.decisionReceiptCount ?? 0)}
-                testId="receipts-901"
-              />
-            </dl>
-          </section>
+            <section className="mb-6">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                PO-901 · Control (unrelated to Atlas)
+              </h2>
+              <dl>
+                <Row
+                  label="PO-901"
+                  value={
+                    controlPo
+                      ? `${controlPo.po.status.replace("_", " ")} — CONTROL / UNRELATED`
+                      : "—"
+                  }
+                  testId="control"
+                />
+                <Row
+                  label="Supplier"
+                  value={controlPo?.po.supplierName ?? "—"}
+                  testId="control-supplier"
+                />
+                <Row
+                  label="Decision Receipts"
+                  value={String(controlPo?.decisionReceiptCount ?? 0)}
+                  testId="receipts-901"
+                />
+              </dl>
+            </section>
 
-          <section>
-            <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              Provenance
-            </h2>
-            <dl>
-              <Row label="Provider mode" value={shownMode} testId="provider-mode" />
-              <Row label="Model recorded on receipts" value={shownModel} testId="model-id" />
-              <Row label="Runtime route" value={shownRoute} testId="runtime-route" />
-              <Row label="Underlying model" value={shownUnderlying} testId="underlying-model" />
-              <Row
-                label="Last run"
-                value={run ? `${run.status} · ${run.startedAt}` : "none"}
-                testId="last-run"
-                tone="muted"
-              />
-            </dl>
-          </section>
+            <section>
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+                Provenance
+              </h2>
+              <dl>
+                <Row label="Provider mode" value={shownMode} testId="provider-mode" />
+                <Row label="Model recorded on receipts" value={shownModel} testId="model-id" />
+                <Row label="Runtime route" value={shownRoute} testId="runtime-route" />
+                <Row label="Underlying model" value={shownUnderlying} testId="underlying-model" />
+                <Row
+                  label="Last run"
+                  value={run ? `${run.status} · ${run.startedAt}` : "none"}
+                  testId="last-run"
+                  tone="muted"
+                />
+              </dl>
+            </section>
+          </details>
         </>
       )}
       <TemporalPanel data={temporal} />
