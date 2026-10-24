@@ -34,6 +34,10 @@ jobs:
         run: npm run typecheck
       - name: Unit tests (includes migration applied to in-process PostgreSQL)
         run: npm test
+      - name: H-MEM official pinned conformance
+        run: npm run hmem:conformance
+      - name: H-MEM actual local-engine PostgreSQL restart probe
+        run: npm run hmem:probe
       - name: Migration consistency
         run: |
           npm run db:check

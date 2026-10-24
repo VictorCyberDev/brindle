@@ -8,7 +8,7 @@ The canonical hackathon stack, and exactly how Brindle talks to each part. Nothi
 | **Meterless Nightshift**     | **Primary competition AI runtime**                                          | First-class primary provider; protocol-tested only                          |
 | **NVIDIA**                   | Provider **configured inside Nightshift**; direct API is **secondary** only | Direct adapter exists as secondary; Nemotron-family model enforced          |
 | **Nemotron**                 | **Required** reasoning model behind the accepted LIVE demo                  | Not yet demonstrated live; acceptance requires proof (see below)            |
-| **H-MEM** (Meterless Engine) | **Mandatory M5** integration (hackathon eligibility)                        | Not implemented. See [Eligibility lock](#hackathon-eligibility-lock-h-mem)  |
+| **H-MEM** (Meterless Engine) | **Mandatory M5** integration (hackathon eligibility)                        | M1 branch: not implemented. Current M5: see `M5_HMEM_RECOVERY_MEMORY.md`    |
 
 ## Zetaris: hackathon local Docker truth plane
 
@@ -117,3 +117,9 @@ BRINDLE_RUNTIME_MODE=live npm run live   # both probes, then a sandbox-reset + f
 ```
 
 Evidence to capture (all secret-free): probe output; the `LIVE ::` banner on the run; six DecisionReceipts whose `truthRefs` resolve to assertions with `source_id = 'zetaris'` and whose recorded model is the Nemotron-family underlying model (not a `route:` id); the `/demo` page showing `PROVIDER MODE: LIVE` with the underlying model proven. Mock output (`MOCK ::`, `MOCK:` ids) is never sponsor evidence.
+
+## Current M5 engine implementation
+
+M5 implements and exercises the documented local H-MEM spec engine with PostgreSQL persistence;
+see `M5_HMEM_RECOVERY_MEMORY.md`. That later implementation does not change this document's
+M1 LIVE status: real Zetaris/Nightshift/Nemotron acceptance remains deferred and mandatory.

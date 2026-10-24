@@ -1,0 +1,30 @@
+{
+  "gate": "PASS",
+  "engine": "ACTUAL_LOCAL_SPEC_ENGINE",
+  "upstreamSha": "1742dec56a66e58eef9dda2d2b865823758ca8cd",
+  "engineTransport": "documented local class API; no remote HTTP service asserted",
+  "sponsorTruthAndReasoning": "MOCK; not LIVE proof",
+  "memoryRef": {
+    "memoryId": "mem-1",
+    "kind": "RECOVERY_PATTERN",
+    "version": 1
+  },
+  "receiptId": "receipt:incident:demo:atlas-certification-revoked:v2:v1:1",
+  "verdict": "RECOVERED",
+  "requiredInvariants": 6,
+  "relevantHits": 1,
+  "restartedDatabaseHits": 1,
+  "irrelevantHits": 0,
+  "relevance": 0.40357155526952276,
+  "retrievalTrace": {
+    "retrievalReason": "hybrid ranking for \"REVOKED certification.ISO-9001 finance_approval purchase_order receiving_allocation supplier_notification verified recovery\" (domain: general)",
+    "strategy": "minimal",
+    "scores": {
+      "mem-1": 0.4036
+    }
+  },
+  "storedRecords": 1,
+  "ledgerRecords": 3,
+  "authority": "ADVISORY_ONLY",
+  "probedAt": "2026-10-24T00:09:13.362Z"
+}

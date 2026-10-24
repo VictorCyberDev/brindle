@@ -117,3 +117,122 @@
     margin-bottom: 0.75rem;
   }
 }
+.control-room {
+  background: var(--brindle-obsidian);
+  color: var(--brindle-bone);
+  font-family: var(--brindle-ui);
+}
+.control-room header h1 {
+  font-family: var(--brindle-display);
+}
+.control-room header p {
+  color: var(--brindle-muted);
+}
+.control-room code {
+  overflow-wrap: anywhere;
+  font-family: var(--brindle-mono);
+}
+.control-room button {
+  cursor: pointer;
+}
+.control-room .seam-button {
+  color: var(--brindle-bone);
+}
+.control-room [data-testid="control-message"] {
+  color: var(--brindle-gold);
+  overflow-wrap: anywhere;
+}
+.proof-room {
+  padding: 1.5rem 0 2rem;
+  border-top: 2px dashed var(--brindle-copper);
+}
+.proof-room h2 {
+  font: 2rem var(--brindle-display);
+  margin: 1rem 0;
+}
+.proof-room p {
+  margin: 0.7rem 0;
+}
+.proof-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0 1.5rem;
+  font: 0.7rem var(--brindle-mono);
+}
+.proof-strip li {
+  border-bottom: 2px solid var(--brindle-muted);
+  padding: 0.6rem 0;
+  color: var(--brindle-muted);
+}
+.proof-strip li[data-done="true"] {
+  border-color: var(--brindle-mint);
+  color: var(--brindle-bone);
+}
+.proof-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.proof-metrics strong {
+  display: block;
+  font: 2.5rem var(--brindle-display);
+  color: var(--brindle-gold);
+}
+.preservation-callout {
+  border-left: 2px solid var(--brindle-mint);
+  padding: 1rem;
+}
+.proof-evidence {
+  margin: 1.5rem 0;
+  padding: 1rem;
+  border: 1px solid var(--brindle-muted);
+}
+.proof-evidence li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--brindle-muted);
+}
+.memory-room {
+  margin-top: 2rem;
+  border-top: 1px solid var(--brindle-copper);
+  padding-top: 1rem;
+}
+.memory-room h3 {
+  font: 1.5rem var(--brindle-display);
+}
+.sponsor-boundary {
+  color: var(--brindle-muted);
+  font-size: 0.8rem;
+}
+.legacy-world {
+  background: var(--brindle-bone);
+  color: var(--brindle-obsidian);
+  padding: 1rem;
+}
+.legacy-world summary {
+  cursor: pointer;
+  margin-bottom: 1rem;
+  font-family: var(--brindle-display);
+}
+.legacy-world summary h2 {
+  display: inline;
+}
+.control-room summary:focus-visible {
+  outline: 2px solid var(--brindle-gold);
+  outline-offset: 3px;
+}
+@media (max-width: 540px) {
+  .control-room {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .proof-room h2 {
+    font-size: 1.7rem;
+  }
+}
+.receipt-link {
+  color: var(--brindle-gold);
+  text-decoration: underline;
+  text-underline-offset: 0.2rem;
+}

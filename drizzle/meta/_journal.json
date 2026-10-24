@@ -22,6 +22,13 @@
       "when": 1792799145799,
       "tag": "0002_recovery_evidence",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792800109278,
+      "tag": "0003_hmem_postgres",
+      "breakpoints": true
     }
   ]
 }
