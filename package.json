@@ -2,7 +2,7 @@
   "name": "brindle",
   "version": "0.0.0",
   "private": true,
-  "description": "Brindle — the Recovery Plane for AI Agents",
+  "description": "Brindle \u2014 the Recovery Plane for AI Agents",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -29,7 +29,8 @@
     "hmem:conformance": "node --import tsx scripts/hmem-conformance/run.mts",
     "hmem:probe": "node --import tsx scripts/hmem-probe.mts",
     "eval:m6": "node --import tsx scripts/eval-m6.mts",
-    "story:snapshot": "node --import tsx scripts/story-snapshot.mts"
+    "story:snapshot": "node --import tsx scripts/story-snapshot.mts",
+    "vercel-build": "node --import tsx scripts/migrate-prod.mts && next build"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",
