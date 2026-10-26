@@ -18,7 +18,8 @@ export function getProductDb(): Promise<DbHandle> {
   holder[KEY] ??= (async () => {
     const config = getConfig();
     if (config.databaseUrl) return createDb(config);
-    if (config.nodeEnv === "production") {
+    // Test-only escape hatch so the browser suite can run the production build without a database.
+    if (config.nodeEnv === "production" && process.env.BRINDLE_E2E_EPHEMERAL_DB !== "1") {
       throw new ProductDatabaseUnavailable(
         "DATABASE_URL is required to run the authenticated app in production.",
       );

@@ -135,7 +135,8 @@ export default async function DeveloperPage() {
         <p className="text-sm text-muted">
           Full reference:{" "}
           <Link className="underline underline-offset-4" href="/docs/api">
-            API docs</Link>
+            API docs
+          </Link>
           . Machine-readable:{" "}
           <a className="underline underline-offset-4" href="/api/v1/openapi.json">
             OpenAPI

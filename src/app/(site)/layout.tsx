@@ -27,7 +27,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeToggle className="max-sm:hidden" />
             <Link
               href="/sign-in"
               className="hidden px-2 text-[0.95rem] text-muted hover:text-fg sm:inline"
@@ -88,6 +88,10 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
               </li>
             </ul>
           </nav>
+        </div>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 pb-6 sm:hidden">
+          <span className="text-sm text-muted">Theme</span>
+          <ThemeToggle />
         </div>
         <p className="border-t border-line px-5 py-5 text-center text-xs text-muted">
           No customer logos, certifications or integrations are claimed on this site that do not

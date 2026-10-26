@@ -14,8 +14,10 @@ export interface SessionUser {
 }
 
 export async function getSessionUser(): Promise<SessionUser | null> {
+  // Read request headers first so every authenticated page is rendered per request, never at build.
+  const requestHeaders = await headers();
   const auth = await getAuth();
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await auth.api.getSession({ headers: requestHeaders });
   if (!session?.user) return null;
   return { id: session.user.id, name: session.user.name, email: session.user.email };
 }

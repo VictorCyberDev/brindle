@@ -32,7 +32,13 @@ export function buildAuth(db: Db, options: { secret: string; baseUrl?: string })
       requireEmailVerification: false, // private beta: no mail provider yet (documented limitation)
     },
     session: { expiresIn: 60 * 60 * 24 * 14, updateAge: 60 * 60 * 24 },
-    rateLimit: { enabled: true, storage: "database", window: 60, max: 30 },
+    // The browser suite signs up many users in seconds from one address; that flag never exists in a deployment.
+    rateLimit: {
+      enabled: process.env.BRINDLE_E2E_EPHEMERAL_DB !== "1",
+      storage: "database",
+      window: 60,
+      max: 30,
+    },
     trustedOrigins: [
       ...(options.baseUrl ? [options.baseUrl] : []),
       ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),

@@ -22,11 +22,7 @@
           "claim": "2 decisions would have changed, 1 would have stayed the same",
           "pass": true,
           "evidence": {
-            "verdicts": [
-              "CHANGED",
-              "SAME",
-              "CHANGED"
-            ]
+            "verdicts": ["CHANGED", "SAME", "CHANGED"]
           }
         },
         {

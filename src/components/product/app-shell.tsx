@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { authClient } from "../../lib/auth-client";
 import { Wordmark } from "../brand/seam";
@@ -28,6 +29,7 @@ export function AppShell({
   attention,
   switcher,
 }: ShellProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[17rem_1fr]">
@@ -62,13 +64,14 @@ export function AppShell({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeToggle className="max-sm:hidden" />
             <Button
               variant="ghost"
               size="sm"
               onClick={async () => {
                 await authClient.signOut();
-                window.location.href = "/";
+                router.replace("/");
+                router.refresh();
               }}
               aria-label={`Sign out ${userName}`}
             >
@@ -125,6 +128,10 @@ export function AppShell({
             <div className="px-1">{switcher}</div>
             <div className="min-h-0 flex-1">
               <AppNav attention={attention} onNavigate={() => setOpen(false)} />
+            </div>
+            <div className="flex items-center justify-between px-3 sm:hidden">
+              <span className="text-sm text-muted">Theme</span>
+              <ThemeToggle />
             </div>
           </div>
         </div>

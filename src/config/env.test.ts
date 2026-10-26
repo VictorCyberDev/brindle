@@ -19,10 +19,20 @@ describe("config validation", () => {
     expect(config.runtimeMode).toBe("local");
     expect(summarizeConfig(config).integrations).toEqual({
       database: "unconfigured",
+      auth: "configured", // development uses a clearly-labelled throwaway secret
       zetaris: "unconfigured",
       meterless: "unconfigured",
       nemotron: "unconfigured",
     });
+  });
+
+  it("never invents an auth secret in production, and rejects a short one", () => {
+    expect(summarizeConfig(loadConfig({ NODE_ENV: "production" })).integrations.auth).toBe(
+      "unconfigured",
+    );
+    expect(() => loadConfig({ BETTER_AUTH_SECRET: "too-short" })).toThrow(/at least 32/);
+    const ok = loadConfig({ NODE_ENV: "production", BETTER_AUTH_SECRET: "x".repeat(40) });
+    expect(JSON.stringify(summarizeConfig(ok))).not.toContain("xxxx");
   });
 
   it("treats blank values (as in .env.example) as unset", () => {

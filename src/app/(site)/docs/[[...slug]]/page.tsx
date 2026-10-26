@@ -21,7 +21,7 @@ export default async function DocsPage({ params }: { params: Promise<{ slug?: st
   const html = renderDoc(slug);
   if (!html) notFound();
   return (
-    <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 md:grid-cols-[14rem_1fr]">
+    <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 grid-cols-[minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)]">
       <nav aria-label="Documentation" className="md:sticky md:top-24 md:self-start">
         <p className="eyebrow mb-3">Documentation</p>
         <ul className="flex gap-4 overflow-x-auto md:block md:space-y-1">

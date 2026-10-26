@@ -76,7 +76,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           title={label}
           onClick={() => choose(value)}
           className={cn(
-            "grid h-7 w-7 place-items-center rounded-sm text-muted transition-colors duration-150",
+            "grid h-8 w-8 place-items-center rounded-sm text-muted transition-colors duration-150",
             pref === value && "bg-sunken text-fg",
           )}
         >
