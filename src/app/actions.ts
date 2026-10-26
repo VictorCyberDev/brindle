@@ -148,7 +148,7 @@ export async function approveRecoveryAction(
   });
 }
 
-export async function resetDemoAction(_: ActionResult | null): Promise<ActionResult> {
+export async function resetDemoAction(): Promise<ActionResult> {
   return guarded(async () => {
     const ctx = await requireWorkspace();
     assertCan(ctx, "mode.change");

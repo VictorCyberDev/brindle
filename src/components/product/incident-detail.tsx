@@ -5,7 +5,7 @@ import type { IncidentView } from "../../product/types";
 import { Seam } from "../brand/seam";
 import { LinkButton } from "../ui/button";
 import { EvidenceDrawer } from "../ui/client";
-import { ArrowRight, Download } from "../ui/icons";
+import { ArrowRight } from "../ui/icons";
 import { Callout, Card, Mono, SectionTitle } from "../ui/layout";
 import { ImpactMap } from "./impact-map";
 import { ProofStrip, type Stage } from "./proof-strip";
@@ -148,8 +148,10 @@ export function IncidentDetail({
               <h3 className="font-semibold">What Brindle will preserve</h3>
               <ul className="mt-3 space-y-2">
                 {i.preserved.map((p) => (
-                  <li key={p.label} className="flex gap-3">
-                    <TreatmentBadge treatment="PRESERVED" />
+                  <li key={p.label} className="flex items-start gap-3">
+                    <span className="mt-0.5 shrink-0 self-start">
+                      <TreatmentBadge treatment="PRESERVED" />
+                    </span>
                     <span>
                       <span className="font-medium">{p.label}.</span>{" "}
                       <span className="text-muted">{p.why}</span>

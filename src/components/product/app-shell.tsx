@@ -68,7 +68,7 @@ export function AppShell({
               size="sm"
               onClick={async () => {
                 await authClient.signOut();
-                window.location.assign("/");
+                window.location.href = "/";
               }}
               aria-label={`Sign out ${userName}`}
             >
