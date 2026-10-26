@@ -10,6 +10,7 @@ import { closeIncident } from "../brindle/recovery/incident";
 import { canonical } from "./evidence";
 import { readMateriality } from "./materiality";
 import {
+  CONTROL_PO_ID,
   type effectFromRow,
   incidentFromRow,
   moveIncident,
@@ -108,16 +109,17 @@ function inspect(
   const plan = recovery.plan!;
   const invalid = replacementStatus === "REVOKED";
   const supplier = plan.primaryBefore.pos[0]?.supplierId;
+  const primaryPoId = plan.primaryBefore.pos[0]?.id;
   const prohibitedOpen = state.pos.filter(
     (p) => p.supplierId === supplier && p.status !== "CANCELLED" && invalid,
   ).length;
-  const activeFinance = state.finance.filter((p) => p.poId === "PO-827" && invalid).length;
-  const activeReceiving = state.receiving.filter((p) => p.poId === "PO-827" && invalid).length;
+  const activeFinance = state.finance.filter((p) => p.poId === primaryPoId && invalid).length;
+  const activeReceiving = state.receiving.filter((p) => p.poId === primaryPoId && invalid).length;
   const control = {
-    pos: state.pos.filter((p) => p.id === "PO-901"),
-    finance: state.finance.filter((p) => p.poId === "PO-901"),
-    receiving: state.receiving.filter((p) => p.poId === "PO-901"),
-    notifications: state.notifications.filter((p) => p.poId === "PO-901"),
+    pos: state.pos.filter((p) => p.id === CONTROL_PO_ID),
+    finance: state.finance.filter((p) => p.poId === CONTROL_PO_ID),
+    receiving: state.receiving.filter((p) => p.poId === CONTROL_PO_ID),
+    notifications: state.notifications.filter((p) => p.poId === CONTROL_PO_ID),
     receipts: state.controlReceipts,
   };
   const controlUnchanged = canonical(control) === canonical(plan.control);
@@ -153,7 +155,9 @@ function inspect(
         pass: unhandled === 0,
         detail: {
           unhandled,
-          originalNotificationRetained: state.notifications.some((n) => n.id === "notif:PO-827"),
+          originalNotificationRetained: state.notifications.some(
+            (n) => n.id === `notif:${primaryPoId}`,
+          ),
         },
       },
       { pass: controlUnchanged, detail: { controlUnchanged } },

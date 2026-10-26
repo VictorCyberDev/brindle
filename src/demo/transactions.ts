@@ -35,3 +35,19 @@ export const DEMO_TRANSACTIONS: readonly DemoTransaction[] = [
     },
   },
 ];
+
+/**
+ * M6 second incident world: a distinct supplier and PO so a later, separate incident can retrieve the
+ * verified recovery of the first. Deliberately NOT part of DEMO_TRANSACTIONS (the locked M1 pair).
+ */
+export const SECOND_INCIDENT_TRANSACTION: DemoTransaction = {
+  role: "PRIMARY",
+  supplierName: "Cedarline Bearings",
+  request: {
+    poId: "PO-933",
+    supplierId: "SUP-CEDAR",
+    description: "Sealed ball bearings, grade 3 (qty 1,200)",
+    amountCents: 3_200_000,
+    currency: "USD",
+  },
+};

@@ -22,6 +22,42 @@ import { readMateriality } from "./materiality";
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 const json = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+/** The permanent unrelated control: never a recovery target, always baselined and re-verified. */
+export const CONTROL_PO_ID = "PO-901";
+
+/**
+ * The single purchase order a revision can touch: the (one) non-control PO of the revised supplier.
+ * Fails closed when it is ambiguous or absent.
+ */
+export async function resolvePrimaryPo(
+  db: Db | Tx,
+  revisionId: string,
+): Promise<{ supplierId: string; poId: string }> {
+  const [revision] = await db
+    .select()
+    .from(t.truthRevisions)
+    .where(eq(t.truthRevisions.id, revisionId));
+  if (!revision) throw new Error("REVISION_NOT_FOUND");
+  const [assertion] = await db
+    .select()
+    .from(t.truthAssertions)
+    .where(
+      and(
+        eq(t.truthAssertions.assertionId, revision.previousAssertionId),
+        eq(t.truthAssertions.version, revision.previousVersion),
+      ),
+    );
+  if (!assertion || assertion.subjectType !== "supplier") throw new Error("SCOPE_UNRESOLVED");
+  const pos = (
+    await db
+      .select()
+      .from(t.purchaseOrders)
+      .where(eq(t.purchaseOrders.supplierId, assertion.subjectId))
+  ).filter((p) => p.id !== CONTROL_PO_ID && p.status !== "CANCELLED");
+  if (pos.length !== 1) throw new Error("SCOPE_UNRESOLVED");
+  return { supplierId: assertion.subjectId, poId: pos[0]!.id };
+}
 export interface RecoveryActor {
   id: string;
   authority: readonly string[];
@@ -77,7 +113,7 @@ export const SANDBOX_RECOVERY_ACTOR: RecoveryActor = Object.freeze({
 });
 const paramsSchema = z.strictObject({
   targetId: z.string().min(1),
-  poId: z.literal("PO-827"),
+  poId: z.string().min(1),
   expectedBefore: jsonObjectSchema,
   planFingerprint: z.string().length(64),
   order: z.number().int().min(0).max(3),
@@ -231,7 +267,11 @@ export function validateRecoveryStep(
     throw new Error("UNSUPPORTED_EFFECT");
   const expectedPo =
     effect.target.entityType === "purchase_order" ? params.targetId : params.expectedBefore.poId;
-  if (expectedPo !== "PO-827" || params.expectedBefore.id !== params.targetId)
+  if (
+    expectedPo !== params.poId ||
+    params.poId === CONTROL_PO_ID ||
+    params.expectedBefore.id !== params.targetId
+  )
     throw new Error("TARGET_OUTSIDE_SANDBOX_BOUND");
   return { step, params, capability };
 }
@@ -305,6 +345,7 @@ export async function planRecovery(db: Db, revisionId: string, actor: RecoveryAc
     const [exists] = await tx.select().from(t.incidents).where(eq(t.incidents.id, id));
     if (exists) return;
     const now = new Date();
+    const scope = await resolvePrimaryPo(tx, revisionId);
     const [opened] = await tx
       .insert(t.incidents)
       .values({ id, revisionId, status: "OPEN", openedAt: now, updatedAt: now })
@@ -312,8 +353,8 @@ export async function planRecovery(db: Db, revisionId: string, actor: RecoveryAc
     let incident = await moveIncident(tx, opened!, "ANALYZING");
     const plan: PlanEvidence = {
       assessmentHash: hash,
-      control: await businessSnapshot(tx, "PO-901"),
-      primaryBefore: await businessSnapshot(tx, "PO-827"),
+      control: await businessSnapshot(tx, CONTROL_PO_ID),
+      primaryBefore: await businessSnapshot(tx, scope.poId),
       preservedConsequences: materiality.consequences
         .filter((c) => c.treatment === "PRESERVE")
         .map((c) => c.id),
@@ -351,7 +392,7 @@ export async function planRecovery(db: Db, revisionId: string, actor: RecoveryAc
           const before = await targetRecord(tx, type, candidate.ref_id);
           if (!before) continue;
           const poId = type === "purchase_order" ? before.id : before.poId;
-          if (poId !== "PO-827") throw new Error("TARGET_OUTSIDE_SANDBOX_BOUND");
+          if (poId !== scope.poId) throw new Error("TARGET_OUTSIDE_SANDBOX_BOUND");
           const key = `${type}:${candidate.ref_id}`;
           if (seen.has(key)) {
             found = true;
@@ -411,7 +452,7 @@ export async function planRecovery(db: Db, revisionId: string, actor: RecoveryAc
           }),
           parameters: {
             targetId: e.target.entityId,
-            poId: "PO-827",
+            poId: scope.poId,
             expectedBefore: p.before,
             planFingerprint: hash,
             order: p.order,
@@ -534,6 +575,7 @@ export async function executeRecovery(
         if (params.planFingerprint !== recovery!.plan!.assessmentHash)
           throw new Error("IMMUTABLE_PLAN_CONFLICT");
         const baseline = recovery!.plan!.primaryBefore;
+        if (params.poId !== baseline.pos[0]?.id) throw new Error("TARGET_OUTSIDE_SANDBOX_BOUND");
         const baselineRows =
           effect.target.entityType === "purchase_order"
             ? baseline.pos

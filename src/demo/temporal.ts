@@ -5,13 +5,34 @@ import { loadTruthByRefs } from "./store";
 import { blastRadius, buildConsequenceGraph, ingestRevision } from "../services/temporal";
 
 export const ATLAS_REVISION_ID = "demo:atlas-certification-revoked:v2";
+export const CEDAR_REVISION_ID = "demo:cedar-certification-revoked:v2";
+
+export interface RevocationScenario {
+  revisionId: string;
+  supplierId: string;
+  /** PO whose procurement decision relied on the certification. */
+  poId: string;
+}
+export const ATLAS_SCENARIO: RevocationScenario = {
+  revisionId: ATLAS_REVISION_ID,
+  supplierId: "SUP-ATLAS",
+  poId: "PO-827",
+};
+export const CEDAR_SCENARIO: RevocationScenario = {
+  revisionId: CEDAR_REVISION_ID,
+  supplierId: "SUP-CEDAR",
+  poId: "PO-933",
+};
+
+export const injectAtlasRevision = (db: Db) => injectCertificationRevoked(db, ATLAS_SCENARIO);
 
 /** Explicit SANDBOX injection; never calls sponsors or recovery. Uses the persisted decision clock. */
-export async function injectAtlasRevision(db: Db) {
+export async function injectCertificationRevoked(db: Db, scenario: RevocationScenario) {
+  const revisionId = scenario.revisionId;
   const [receipt] = await db
     .select()
     .from(t.decisionReceipts)
-    .where(eq(t.decisionReceipts.id, "dec:PO-827:procurement"));
+    .where(eq(t.decisionReceipts.id, `dec:${scenario.poId}:procurement`));
   const [control] = await db
     .select()
     .from(t.purchaseOrders)
@@ -20,9 +41,9 @@ export async function injectAtlasRevision(db: Db) {
   const all = await db
     .select()
     .from(t.truthAssertions)
-    .where(eq(t.truthAssertions.subjectId, "SUP-ATLAS"));
+    .where(eq(t.truthAssertions.subjectId, scenario.supplierId));
   const cert = all.find((a) => a.factKey === "certification.ISO-9001" && a.version === 1);
-  if (!cert) throw new Error("Atlas certification v1 is missing");
+  if (!cert) throw new Error("certification v1 is missing");
   const [previous] = await loadTruthByRefs(db, [{ assertionId: cert.assertionId, version: 1 }]);
   if (
     !previous ||
@@ -39,7 +60,7 @@ export async function injectAtlasRevision(db: Db) {
   await ingestRevision(
     db,
     {
-      revisionId: ATLAS_REVISION_ID,
+      revisionId: revisionId,
       previous: { assertionId: previous.assertionId, version: 1 },
       replacement: { assertionId: previous.assertionId, version: 2 },
       effectiveFrom,
@@ -53,17 +74,17 @@ export async function injectAtlasRevision(db: Db) {
       value: { ...previous.value, status: "REVOKED" },
       validFrom: effectiveFrom,
       observedAt,
-      provenance: { recordedBy: "SANDBOX:M2-injection", sourceRecordRef: ATLAS_REVISION_ID },
+      provenance: { recordedBy: "SANDBOX:M2-injection", sourceRecordRef: revisionId },
     },
   );
-  return readTemporalDemo(db);
+  return readTemporalDemo(db, revisionId);
 }
 
-export async function readTemporalDemo(db: Db) {
+export async function readTemporalDemo(db: Db, revisionId: string = ATLAS_REVISION_ID) {
   const [revision] = await db
     .select()
     .from(t.truthRevisions)
-    .where(eq(t.truthRevisions.id, ATLAS_REVISION_ID));
+    .where(eq(t.truthRevisions.id, revisionId));
   if (!revision) return null;
   const truth = await loadTruthByRefs(db, [
     { assertionId: revision.previousAssertionId, version: revision.previousVersion },

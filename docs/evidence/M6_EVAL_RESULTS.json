@@ -1,0 +1,368 @@
+{
+  "engine": "ACTUAL_BRINDLE_ENGINE_MOCK_TRUTH_AND_REASONER",
+  "results": [
+    {
+      "id": 1,
+      "name": "Canonical retroactive recovery",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "revision is retroactive",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "impact reaches PO-827's decisions and not the control",
+          "pass": true,
+          "evidence": {
+            "candidates": 10
+          }
+        },
+        {
+          "claim": "2 decisions would have changed, 1 would have stayed the same",
+          "pass": true,
+          "evidence": {
+            "verdicts": [
+              "CHANGED",
+              "SAME",
+              "CHANGED"
+            ]
+          }
+        },
+        {
+          "claim": "recovery plan has 4 registered, bounded steps",
+          "pass": true,
+          "evidence": {
+            "capabilities": [
+              "sandbox.receiving.cancel.v1",
+              "sandbox.finance.revoke.v1",
+              "sandbox.po.cancel.v1",
+              "sandbox.notification.remediate.v1"
+            ]
+          }
+        },
+        {
+          "claim": "execution leaves VERIFYING (not closed by executor success)",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "fresh independent verification closes as RECOVERED",
+          "pass": true,
+          "evidence": {
+            "invariants": [
+              "prohibited-vendor-open-pos:PASS",
+              "invalid-po-finance-approvals:PASS",
+              "invalid-po-receiving-allocations:PASS",
+              "irreversible-consequences-handled:PASS",
+              "unrelated-control-preserved:PASS",
+              "no-duplicate-compensation:PASS"
+            ]
+          }
+        },
+        {
+          "claim": "a Recovery Receipt exists",
+          "pass": true,
+          "evidence": {
+            "receiptId": "receipt:incident:demo:atlas-certification-revoked:v2:v1:1"
+          }
+        },
+        {
+          "claim": "PO-901 control is byte-for-byte unchanged",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Future-only truth change",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "revision is NOT retroactive (effective after it was learned)",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "no historical decision is affected",
+          "pass": true,
+          "evidence": {
+            "decisionCandidates": 0
+          }
+        },
+        {
+          "claim": "no incident, effect or recovery step is created",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "PO-827 stays exactly as the agents left it",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "SAME decisions are preserved",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "every affected decision is judged SAME",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "7 consequences are explicitly preserved",
+          "pass": true,
+          "evidence": {
+            "preserved": 7
+          }
+        },
+        {
+          "claim": "no mutation is made to PO-827",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "UNCERTAIN escalates safely",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "the uncertain ancestry is never coerced to SAME or CHANGED",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "no automatic step is created",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "execution is refused",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "nothing in PO-827 changed",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Irreversible consequence handled honestly",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "the supplier notification is classified IRREVERSIBLE by a deterministic rule",
+          "pass": true,
+          "evidence": {
+            "ruleId": "sandbox.notification-history.v1"
+          }
+        },
+        {
+          "claim": "it receives REMEDIATE, never REVERSE or COMPENSATE",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "the original notification is retained as historical fact",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "the receipt never says an irreversible effect was reversed",
+          "pass": true,
+          "evidence": {
+            "outcomes": [
+              "COMPENSABLE:COMPENSATED",
+              "COMPENSABLE:COMPENSATED",
+              "REVERSIBLE:REVERSED",
+              "IRREVERSIBLE:REMEDIATED"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Precondition / compensator failure",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "recovery is RECOVERY_INCOMPLETE",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "the failure is PRECONDITION_CHANGED",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "the externally changed state is preserved, not overwritten",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "no RECOVERED receipt is issued and the incident is not closed",
+          "pass": true,
+          "evidence": {
+            "verifyRefused": true,
+            "status": "RECOVERY_INCOMPLETE"
+          }
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Duplicate / replay safety",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "planning twice yields the same immutable plan",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "executing twice performs each step once",
+          "pass": true,
+          "evidence": {
+            "executions": 4
+          }
+        },
+        {
+          "claim": "verifying twice returns the same receipt",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "exactly one RECOVERED receipt exists",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "re-ingesting the same revision adds nothing",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "name": "H-MEM cross-incident transfer",
+      "passed": true,
+      "claims": [
+        {
+          "claim": "Incident A honestly has no prior pattern",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "Incident A is RECOVERED with a receipt",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "only after verification is it promoted to H-MEM",
+          "pass": true,
+          "evidence": {
+            "memoryId": "mem-1"
+          }
+        },
+        {
+          "claim": "Incident B is a distinct incident",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "H-MEM is queried BEFORE Incident B is planned",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "Incident A is retrieved",
+          "pass": true,
+          "evidence": {
+            "relevance": 0.40357155055722205
+          }
+        },
+        {
+          "claim": "the current incident is excluded",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "authority remains advisory only",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "the lookup mutated nothing",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "Incident B's plan still comes only from the deterministic registry",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "Incident B is independently verified",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "PO-901 and the already-recovered PO-827 are untouched by Incident B",
+          "pass": true,
+          "evidence": {}
+        },
+        {
+          "claim": "Incident A's own memory is not erased",
+          "pass": true,
+          "evidence": {}
+        }
+      ]
+    }
+  ],
+  "ablation": [
+    {
+      "component": "Temporal filtering",
+      "scenario": "Future-only truth change",
+      "measure": "consequences sent to analysis/recovery for decisions the change never touched",
+      "withSafeguard": 0,
+      "withoutSafeguard": 10,
+      "consequence": "Without the decision-time barrier every downstream object that merely shares lineage with the fact is treated as affected."
+    },
+    {
+      "component": "Materiality",
+      "scenario": "SAME decisions are preserved",
+      "measure": "business objects mutated although the decision would have been identical",
+      "withSafeguard": 0,
+      "withoutSafeguard": 4,
+      "consequence": "Without counterfactual materiality every reachable object is cancelled or compensated, including correct work."
+    },
+    {
+      "component": "Fresh verification",
+      "scenario": "Residual violation after executor success",
+      "measure": "false RECOVERED verdicts",
+      "withSafeguard": 0,
+      "withoutSafeguard": 1,
+      "consequence": "Trusting the executor's success response would close the incident while a prohibited open PO still exists."
+    },
+    {
+      "component": "H-MEM",
+      "scenario": "Cross-incident transfer",
+      "measure": "verified prior-failure warnings shown to the operator before planning",
+      "withSafeguard": 1,
+      "withoutSafeguard": 0,
+      "consequence": "Without memory the operator re-learns a known failure mode during the next incident. Memory is advisory only: it never changes the plan."
+    }
+  ]
+}
