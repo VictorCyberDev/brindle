@@ -5,9 +5,9 @@
 When a fact your AI agents relied on turns out to be wrong, Brindle finds exactly what it touched,
 recovers only that, preserves everything else, and proves it. The recovery plane for AI agents.
 
-- **Live private beta:** **DEPLOYED_URL**
-- **Product tour (no sign-up):** **DEPLOYED_URL**/demo
-- **Docs:** **DEPLOYED_URL**/docs
+- **Live private beta:** https://brindle-start-up16.vercel.app
+- **Product tour (no sign-up):** https://brindle-start-up16.vercel.app/demo
+- **Docs:** https://brindle-start-up16.vercel.app/docs
 
 > Brindle Recovery is a working name. See [docs/BRAND_NAMING_RISK.md](docs/BRAND_NAMING_RISK.md).
 

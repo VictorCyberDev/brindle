@@ -27,4 +27,4 @@ See `SPONSOR_PROOF_CHECKLIST.md`. Only items with evidence are claimed.
 
 ## Links
 
-Product: **DEPLOYED_URL** · Tour: **DEPLOYED_URL**/demo · Repo: github.com/VictorCyberDev/brindle
+Product: https://brindle-start-up16.vercel.app · Tour: https://brindle-start-up16.vercel.app/demo · Repo: github.com/VictorCyberDev/brindle
