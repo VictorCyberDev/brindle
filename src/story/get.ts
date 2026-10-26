@@ -1,5 +1,5 @@
 import snapshot from "./snapshot.json";
-import { STORY_VERSION, type StorySnapshot } from "./snapshot";
+import { STORY_VERSION, type StorySnapshot } from "./types";
 
 /**
  * The committed recording of one real engine run (regenerate with `npm run story:snapshot`).

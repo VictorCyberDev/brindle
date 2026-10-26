@@ -26,38 +26,11 @@ import { verifyRecovery } from "../services/verification";
  * the public demo tour and the Demo Workspace. Truth and reasoning are labelled MOCK; the engine
  * (temporal graph, materiality, recovery, fresh verification, H-MEM) is the real implementation.
  */
-export const STORY_VERSION = 1;
+export { STORY_VERSION } from "./types";
+export type { IncidentPhases, StorySnapshot } from "./types";
+import { STORY_VERSION, type IncidentPhases, type Json, type StorySnapshot } from "./types";
 
-type Json = ReturnType<typeof JSON.parse>;
 const plain = <T>(value: T): Json => JSON.parse(JSON.stringify(value));
-
-export interface IncidentPhases {
-  key: "A" | "B";
-  scenario: RevocationScenario;
-  incidentId: string;
-  supplierName: string;
-  /** Impact + materiality, before any plan exists. */
-  opened: { temporal: Json; materiality: Json };
-  /** What H-MEM returned BEFORE planning. */
-  memoryBeforePlanning: Json;
-  /** The recovery plan, before execution. */
-  planned: { recovery: Json };
-  /** After execution and independent verification. */
-  recovered: { recovery: Json; proof: Json };
-  /** The pattern H-MEM stored after verification. */
-  remembered: Json;
-}
-
-export interface StorySnapshot {
-  version: number;
-  engine: "ACTUAL_BRINDLE_ENGINE";
-  truthAndReasoning: "MOCK";
-  computedAt: string;
-  healthyWorld: Json;
-  incidents: [IncidentPhases, IncidentPhases];
-  /** Control PO-901 state at the end, to prove it was never touched. */
-  controlAtEnd: Json;
-}
 
 async function captureIncident(
   world: IsolatedWorld,
