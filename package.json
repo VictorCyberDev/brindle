@@ -28,7 +28,8 @@
     "zetaris:seed-csv": "tsx --env-file-if-exists=.env.local scripts/zetaris-seed-csv.mts",
     "hmem:conformance": "node --import tsx scripts/hmem-conformance/run.mts",
     "hmem:probe": "node --import tsx scripts/hmem-probe.mts",
-    "eval:m6": "node --import tsx scripts/eval-m6.mts"
+    "eval:m6": "node --import tsx scripts/eval-m6.mts",
+    "story:snapshot": "node --import tsx scripts/story-snapshot.mts"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "5.3.0",

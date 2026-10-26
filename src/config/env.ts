@@ -53,6 +53,10 @@ const rawEnvSchema = z.object({
   NVIDIA_API_KEY: optionalString,
   NEMOTRON_PROVIDER: z.preprocess(blankToUndefined, z.enum(NEMOTRON_PROVIDERS).optional()),
   NEMOTRON_MODEL_ID: optionalString,
+  // Product layer (authentication). Required whenever the authenticated app is served in production.
+  BETTER_AUTH_SECRET: optionalString,
+  BETTER_AUTH_URL: optionalUrl,
+  BRINDLE_IP_SALT: optionalString,
 });
 
 export type ZetarisConfig =
@@ -97,8 +101,13 @@ export type NemotronConfig =
       modelId: string;
     };
 
+export type AuthConfig =
+  | { status: "unconfigured" }
+  | { status: "configured"; secret: string; baseUrl: string | undefined; ipSalt: string };
+
 export interface AppConfig {
   nodeEnv: "development" | "test" | "production";
+  auth: AuthConfig;
   runtimeMode: RuntimeMode;
   /** undefined when not provided; required in live mode. */
   databaseUrl: string | undefined;
@@ -226,12 +235,35 @@ export function loadConfig(env: Readonly<Record<string, string | undefined>>): A
   if (live && !e.DATABASE_URL)
     issues.push("DATABASE_URL is required when BRINDLE_RUNTIME_MODE=live");
 
+  // --- Product authentication. Development gets a clearly labelled throwaway secret. ---
+  let auth: AuthConfig = { status: "unconfigured" };
+  if (e.BETTER_AUTH_SECRET) {
+    if (e.BETTER_AUTH_SECRET.length < 32) {
+      issues.push("BETTER_AUTH_SECRET must be at least 32 characters");
+    } else {
+      auth = {
+        status: "configured",
+        secret: e.BETTER_AUTH_SECRET,
+        baseUrl: e.BETTER_AUTH_URL ? stripTrailingSlashes(e.BETTER_AUTH_URL) : undefined,
+        ipSalt: e.BRINDLE_IP_SALT ?? e.BETTER_AUTH_SECRET,
+      };
+    }
+  } else if (e.NODE_ENV !== "production") {
+    auth = {
+      status: "configured",
+      secret: "development-only-secret-do-not-use-in-production-0000",
+      baseUrl: e.BETTER_AUTH_URL ? stripTrailingSlashes(e.BETTER_AUTH_URL) : undefined,
+      ipSalt: "development-only-ip-salt",
+    };
+  }
+
   if (issues.length > 0) throw new ConfigError(issues);
 
   return {
     nodeEnv: e.NODE_ENV,
     runtimeMode: e.BRINDLE_RUNTIME_MODE,
     databaseUrl: e.DATABASE_URL,
+    auth,
     zetaris,
     meterless,
     nemotron,
@@ -253,6 +285,7 @@ export interface ConfigSummary {
   nodeEnv: AppConfig["nodeEnv"];
   integrations: {
     database: "configured" | "unconfigured";
+    auth: "configured" | "unconfigured";
     zetaris: "configured" | "unconfigured";
     meterless: "configured" | "unconfigured";
     nemotron: "configured" | "unconfigured";
@@ -275,6 +308,7 @@ export function summarizeConfig(config: AppConfig): ConfigSummary {
     nodeEnv: config.nodeEnv,
     integrations: {
       database: config.databaseUrl ? "configured" : "unconfigured",
+      auth: config.auth.status,
       zetaris: config.zetaris.status,
       meterless: config.meterless.status,
       nemotron: config.nemotron.status,
