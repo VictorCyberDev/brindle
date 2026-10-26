@@ -25,7 +25,13 @@ export class DatabaseNotConfiguredError extends Error {
 /** Creates a PostgreSQL-backed client lazily; importing this module never opens a connection. */
 export function createDb(config: Pick<AppConfig, "databaseUrl">): DbHandle {
   if (!config.databaseUrl) throw new DatabaseNotConfiguredError();
-  const client = postgres(config.databaseUrl, { max: 5 });
+  // prepare:false keeps this compatible with pooled (PgBouncer-style) serverless connection strings.
+  const client = postgres(config.databaseUrl, {
+    max: 5,
+    prepare: false,
+    idle_timeout: 20,
+    connect_timeout: 15,
+  });
   return { db: drizzlePostgres(client, { schema }), kind: "postgres", close: () => client.end() };
 }
 

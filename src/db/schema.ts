@@ -520,3 +520,5 @@ export const hmemLedger = pgTable(
     index("hmem_ledger_time_idx").on(t.recordedAt),
   ],
 );
+
+export * from "./product-schema";

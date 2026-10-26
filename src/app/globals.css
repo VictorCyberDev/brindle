@@ -1,238 +1,358 @@
 @import "tailwindcss";
 
+/*
+ * BRINDLE RECOVERY design tokens. Every colour, radius, shadow, size and duration used by a
+ * component comes from here. Components use semantic utilities (bg-surface, text-muted, ...),
+ * never hex values. Brand palette (docs/brand/BRAND_SYSTEM.md):
+ *   Signal #FF5A2A · Ink #11100E · Warm Paper #F6F1E8 · Recovery #1FAD7A · Evidence #E5B644 ·
+ *   Critical #D94B3D · Quiet #8C867E
+ * The raw brand colours are surfaces and accents. Text-on-background colours are separate,
+ * contrast-checked tokens (see "text" variants), because Signal/Recovery/Evidence fail AA as text on Paper.
+ */
 :root {
-  --brindle-obsidian: #0c1110;
-  --brindle-bone: #f4f0e8;
-  --brindle-copper: #c96a4b;
-  --brindle-mint: #4ed6a0;
-  --brindle-gold: #e6b85c;
-  --brindle-critical: #ff5c57;
-  --brindle-muted: #8e9893;
-  --brindle-ui: "IBM Plex Sans", Arial, sans-serif;
-  --brindle-display: "IBM Plex Sans Condensed", "Arial Narrow", Arial, sans-serif;
-  --brindle-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --paper: #f6f1e8;
+  --ink: #11100e;
+  --signal: #ff5a2a;
+  --recovery: #1fad7a;
+  --evidence: #e5b644;
+  --critical: #d94b3d;
+  --quiet: #8c867e;
+
+  /* Light theme: editorial, warm, high-trust. */
+  --bg: #f6f1e8;
+  --bg-raised: #fbf8f2;
+  --bg-sunken: #ece5d7;
+  --fg: #11100e;
+  --fg-muted: #5f5a52;
+  --fg-faint: #8c867e; /* decorative / disabled only: 3.2:1 on Paper */
+  --line: rgb(17 16 14 / 0.12);
+  --line-strong: rgb(17 16 14 / 0.28);
+
+  --signal-fill: #ff5a2a;
+  --signal-on: #11100e; /* Ink on Signal is 6.1:1; white is 3.1:1 */
+  --signal-text: #c23a0c; /* 4.8:1 on Paper */
+  --signal-wash: rgb(255 90 42 / 0.12);
+
+  --recovery-fill: #1fad7a;
+  --recovery-text: #0e7a55; /* 4.8:1 */
+  --recovery-wash: rgb(31 173 122 / 0.14);
+
+  --evidence-fill: #e5b644;
+  --evidence-text: #86600b; /* 5.1:1 */
+  --evidence-wash: rgb(229 182 68 / 0.2);
+
+  --critical-fill: #d94b3d;
+  --critical-text: #b53326; /* 5.4:1 */
+  --critical-wash: rgb(217 75 61 / 0.12);
+
+  --focus: #11100e;
+  --shadow-raise: 0 1px 0 rgb(17 16 14 / 0.04), 0 10px 30px -18px rgb(17 16 14 / 0.35);
+  --shadow-pop: 0 18px 50px -20px rgb(17 16 14 / 0.45);
+  --grain-opacity: 0.5;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 12px;
+
+  --dur-fast: 150ms;
+  --dur: 220ms;
+  --dur-slow: 700ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  --z-sticky: 20;
+  --z-drawer: 40;
+  --z-dialog: 50;
+  --z-toast: 60;
 }
-.temporal-room {
-  margin-top: 3rem;
-  padding: 2rem;
-  background: var(--brindle-obsidian);
-  color: var(--brindle-bone);
-  font-family: var(--brindle-ui);
+
+/* Dark theme: operational, focused, premium. Not an inversion: surfaces are warm Ink layers. */
+:root[data-theme="dark"] {
+  --bg: #11100e;
+  --bg-raised: #1a1815;
+  --bg-sunken: #0b0a09;
+  --fg: #f6f1e8;
+  --fg-muted: #a9a39a;
+  --fg-faint: #8c867e;
+  --line: rgb(246 241 232 / 0.11);
+  --line-strong: rgb(246 241 232 / 0.3);
+
+  --signal-text: #ff7a52;
+  --signal-wash: rgb(255 90 42 / 0.16);
+  --recovery-text: #3fcf9b;
+  --recovery-wash: rgb(31 173 122 / 0.18);
+  --evidence-text: #e5b644;
+  --evidence-wash: rgb(229 182 68 / 0.16);
+  --critical-text: #ef7a6e;
+  --critical-wash: rgb(217 75 61 / 0.2);
+
+  --focus: #f6f1e8;
+  --shadow-raise: 0 1px 0 rgb(246 241 232 / 0.04), 0 14px 36px -20px rgb(0 0 0 / 0.8);
+  --shadow-pop: 0 22px 60px -20px rgb(0 0 0 / 0.85);
+  --grain-opacity: 0.35;
 }
-.temporal-room h2 {
-  font: 2rem var(--brindle-display);
-  margin: 1rem 0;
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--bg-raised);
+  --color-sunken: var(--bg-sunken);
+  --color-fg: var(--fg);
+  --color-muted: var(--fg-muted);
+  --color-faint: var(--fg-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-signal: var(--signal-fill);
+  --color-signal-on: var(--signal-on);
+  --color-signal-text: var(--signal-text);
+  --color-signal-wash: var(--signal-wash);
+  --color-recovery: var(--recovery-fill);
+  --color-recovery-text: var(--recovery-text);
+  --color-recovery-wash: var(--recovery-wash);
+  --color-evidence: var(--evidence-fill);
+  --color-evidence-text: var(--evidence-text);
+  --color-evidence-wash: var(--evidence-wash);
+  --color-critical: var(--critical-fill);
+  --color-critical-text: var(--critical-text);
+  --color-critical-wash: var(--critical-wash);
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-quiet: var(--quiet);
+
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --shadow-raise: var(--shadow-raise);
+  --shadow-pop: var(--shadow-pop);
+  --ease-brindle: var(--ease);
 }
-.temporal-room h3 {
-  font: 1.3rem var(--brindle-display);
-  margin: 2rem 0 1rem;
+
+@layer base {
+  html {
+    color-scheme: light;
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.55;
+    font-feature-settings: "ss01", "kern";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+    letter-spacing: -0.012em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background: var(--signal-fill);
+    color: var(--signal-on);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+  button,
+  [role="button"],
+  summary,
+  a {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  code,
+  kbd,
+  samp {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+  }
 }
-.temporal-room p {
-  margin: 0.75rem 0;
-}
-.temporal-room code,
-.evidence-list dd {
-  font-family: var(--brindle-mono);
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
-}
-.eyebrow {
-  color: var(--brindle-muted);
-  letter-spacing: 0.12em;
-  font-size: 0.75rem;
-}
-.candidate-notice {
-  border: 1px solid var(--brindle-gold);
-  padding: 1rem;
-}
-.revision-seam {
-  border-top: 2px dashed var(--brindle-copper);
-  border-bottom: 2px solid var(--brindle-copper);
-  margin: 2rem 0;
-}
-.beliefs {
-  font: 2rem var(--brindle-display);
-}
-.evidence-list {
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 0.75rem;
-  padding-bottom: 1rem;
-}
-.truth-ref {
-  display: contents;
-}
-.badge {
-  color: var(--brindle-gold);
-  font: 0.7rem var(--brindle-mono);
-  display: inline-block;
-}
-.consequence-map {
-  display: grid;
-  gap: 1rem;
-}
-.candidate-path {
-  border-left: 2px dashed var(--brindle-gold);
-  padding: 0.75rem 1rem;
-}
-.candidate-path strong,
-.candidate-path code {
-  display: block;
-}
-.control-path {
-  border-left: 2px solid var(--brindle-muted);
-  padding: 1rem;
-  margin: 1.5rem 0;
-}
-.temporal-room summary {
-  cursor: pointer;
-  padding: 0.5rem 0;
-}
-.temporal-room details li {
-  margin: 0.5rem 0;
-  overflow-wrap: anywhere;
-}
-.seam-button {
-  border: 1px solid var(--brindle-copper);
-  border-top-style: dashed;
-  padding: 0.4rem 0.75rem;
-  font-family: var(--brindle-ui);
-}
-.seam-button:disabled {
-  opacity: 0.5;
-}
-.seam-button:focus-visible,
-.temporal-room summary:focus-visible {
-  outline: 2px solid var(--brindle-gold);
-  outline-offset: 3px;
-}
-@media (max-width: 540px) {
-  .temporal-room {
+
+@layer components {
+  /* Editorial display type. Serif is reserved for large marketing headlines and proof moments. */
+  .display {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    line-height: 0.98;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .prose-brindle {
+    max-width: 68ch;
+  }
+  .prose-brindle h2 {
+    margin-top: 2.25rem;
+    font-size: 1.5rem;
+    font-weight: 600;
+  }
+  .prose-brindle h3 {
+    margin-top: 1.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  .prose-brindle p,
+  .prose-brindle ul,
+  .prose-brindle ol {
+    margin-top: 0.85rem;
+  }
+  .prose-brindle ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+  }
+  .prose-brindle ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+  }
+  .prose-brindle li {
+    margin-top: 0.3rem;
+  }
+  .prose-brindle a {
+    color: var(--signal-text);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .prose-brindle code {
+    background: var(--bg-sunken);
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    overflow-wrap: anywhere;
+  }
+  .prose-brindle pre {
+    margin-top: 1rem;
+    overflow-x: auto;
+    background: var(--bg-sunken);
+    border-radius: var(--radius);
     padding: 1rem;
+    font-size: 0.85rem;
+    line-height: 1.5;
   }
-  .evidence-list {
-    grid-template-columns: 1fr;
+  .prose-brindle pre code {
+    background: none;
+    padding: 0;
+    overflow-wrap: normal;
   }
-  .evidence-list dd {
-    margin-bottom: 0.75rem;
+  .prose-brindle table {
+    display: block;
+    overflow-x: auto;
+    margin-top: 1rem;
+    max-width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
   }
-}
-.control-room {
-  background: var(--brindle-obsidian);
-  color: var(--brindle-bone);
-  font-family: var(--brindle-ui);
-}
-.control-room header h1 {
-  font-family: var(--brindle-display);
-}
-.control-room header p {
-  color: var(--brindle-muted);
-}
-.control-room code {
-  overflow-wrap: anywhere;
-  font-family: var(--brindle-mono);
-}
-.control-room button {
-  cursor: pointer;
-}
-.control-room .seam-button {
-  color: var(--brindle-bone);
-}
-.control-room [data-testid="control-message"] {
-  color: var(--brindle-gold);
-  overflow-wrap: anywhere;
-}
-.proof-room {
-  padding: 1.5rem 0 2rem;
-  border-top: 2px dashed var(--brindle-copper);
-}
-.proof-room h2 {
-  font: 2rem var(--brindle-display);
-  margin: 1rem 0;
-}
-.proof-room p {
-  margin: 0.7rem 0;
-}
-.proof-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 1rem 0 1.5rem;
-  font: 0.7rem var(--brindle-mono);
-}
-.proof-strip li {
-  border-bottom: 2px solid var(--brindle-muted);
-  padding: 0.6rem 0;
-  color: var(--brindle-muted);
-}
-.proof-strip li[data-done="true"] {
-  border-color: var(--brindle-mint);
-  color: var(--brindle-bone);
-}
-.proof-metrics {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-.proof-metrics strong {
-  display: block;
-  font: 2.5rem var(--brindle-display);
-  color: var(--brindle-gold);
-}
-.preservation-callout {
-  border-left: 2px solid var(--brindle-mint);
-  padding: 1rem;
-}
-.proof-evidence {
-  margin: 1.5rem 0;
-  padding: 1rem;
-  border: 1px solid var(--brindle-muted);
-}
-.proof-evidence li {
-  padding: 0.75rem 0;
-  border-bottom: 1px solid var(--brindle-muted);
-}
-.memory-room {
-  margin-top: 2rem;
-  border-top: 1px solid var(--brindle-copper);
-  padding-top: 1rem;
-}
-.memory-room h3 {
-  font: 1.5rem var(--brindle-display);
-}
-.sponsor-boundary {
-  color: var(--brindle-muted);
-  font-size: 0.8rem;
-}
-.legacy-world {
-  background: var(--brindle-bone);
-  color: var(--brindle-obsidian);
-  padding: 1rem;
-}
-.legacy-world summary {
-  cursor: pointer;
-  margin-bottom: 1rem;
-  font-family: var(--brindle-display);
-}
-.legacy-world summary h2 {
-  display: inline;
-}
-.control-room summary:focus-visible {
-  outline: 2px solid var(--brindle-gold);
-  outline-offset: 3px;
-}
-@media (max-width: 540px) {
-  .control-room {
+  .prose-brindle th,
+  .prose-brindle td {
+    border-bottom: 1px solid var(--line);
+    padding: 0.5rem 0.6rem 0.5rem 0;
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose-brindle blockquote {
+    margin-top: 1rem;
+    border-left: 3px solid var(--signal-fill);
     padding-left: 1rem;
-    padding-right: 1rem;
-  }
-  .proof-room h2 {
-    font-size: 1.7rem;
+    color: var(--fg-muted);
   }
 }
-.receipt-link {
-  color: var(--brindle-gold);
-  text-decoration: underline;
-  text-underline-offset: 0.2rem;
+
+/* The Brindle Seam. Motion explains state; it never blocks a task. */
+@keyframes seam-draw {
+  from {
+    stroke-dashoffset: var(--seam-len, 1);
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes seam-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.seam-path {
+  stroke-dasharray: var(--seam-len, 1);
+  stroke-dashoffset: 0;
+}
+.seam-animate .seam-path {
+  animation: seam-draw var(--dur-slow) var(--ease) both;
+  animation-delay: var(--seam-delay, 0ms);
+}
+.seam-loading .seam-path-fix {
+  animation: seam-pulse 1.4s ease-in-out infinite;
+}
+.rise-in {
+  animation: rise-in var(--dur) var(--ease) both;
+}
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-sunken) 30%, var(--line) 50%, var(--bg-sunken) 70%);
+  background-size: 300% 100%;
+  animation: skeleton 1.6s linear infinite;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Print: proof pages are shared artifacts. */
+@media print {
+  nav,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
 }

@@ -22,6 +22,13 @@ export const ZETARIS_SEED = {
       approval_status: "APPROVED",
       updated_at: "2025-02-01T00:00:00Z",
     },
+    {
+      supplier_id: "SUP-CEDAR",
+      legal_name: "Cedarline Bearings",
+      enabled: "true",
+      approval_status: "APPROVED",
+      updated_at: "2025-03-01T00:00:00Z",
+    },
   ],
   supplier_certifications: [
     {
@@ -39,6 +46,14 @@ export const ZETARIS_SEED = {
       status: "VALID",
       valid_from: "2025-02-01T00:00:00Z",
       valid_to: "2030-01-31T00:00:00Z",
+    },
+    {
+      certification_id: "CERT-CEDAR-9001",
+      supplier_id: "SUP-CEDAR",
+      certification_type: "ISO-9001",
+      status: "VALID",
+      valid_from: "2025-03-01T00:00:00Z",
+      valid_to: "2030-02-28T00:00:00Z",
     },
   ],
   procurement_policy: [

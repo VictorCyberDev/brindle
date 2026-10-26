@@ -570,11 +570,14 @@ async function runTransaction(
  * Idempotent: already-complete state yields ALREADY_COMPLETE with no side
  * effects; partial state demands an explicit reset.
  */
-export async function runSuccessWorld(deps: WorldDeps): Promise<WorldResult> {
+export async function runSuccessWorld(
+  deps: WorldDeps,
+  transactions: readonly DemoTransaction[] = DEMO_TRANSACTIONS,
+): Promise<WorldResult> {
   const now = deps.now ?? (() => new Date());
   const { db } = deps;
 
-  const existing = await Promise.all(DEMO_TRANSACTIONS.map((t) => getPo(db, t.request.poId)));
+  const existing = await Promise.all(transactions.map((t) => getPo(db, t.request.poId)));
   if (existing.every((po) => po?.status === "RECEIVING_SCHEDULED")) {
     return { status: "ALREADY_COMPLETE", steps: [] };
   }
@@ -618,7 +621,7 @@ export async function runSuccessWorld(deps: WorldDeps): Promise<WorldResult> {
       throw new Error("procurement policy truth was not returned by the truth source");
     const policy = procurementPolicyValueSchema.parse(policyAssertion.value);
 
-    for (const tx of DEMO_TRANSACTIONS) {
+    for (const tx of transactions) {
       steps.push(...(await runTransaction(deps, tx, policyAssertion, policy, traceId, now)));
     }
     await finish("COMPLETED", { steps });
