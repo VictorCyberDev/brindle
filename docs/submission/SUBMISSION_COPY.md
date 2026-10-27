@@ -18,7 +18,7 @@ When a fact your AI agents relied on turns out to be wrong, Brindle traces every
 ## What is honestly not done
 
 - Connectors that execute recovery in a customer's own systems.
-- LIVE sponsor acceptance for Zetaris and Meterless Nightshift is BLOCKED; it is not claimed.
+- Zetaris is LIVE PROVEN in the official sponsor Docker runtime. Meterless Nightshift and NVIDIA/Nemotron LIVE acceptance remain blocked and are not claimed.
 - No customers, no certifications, no billing.
 
 ## How the sponsors fit
