@@ -9,12 +9,10 @@ import { ZetarisResponseShapeUnsupportedError } from "./errors";
  * Zetaris environment returns is not proven until a live call, so the family is
  * classified explicitly and reported.
  *
- * Column metadata: NO metadata field for this endpoint is documented in any
- * source available to this repository (the generic Zetaris OpenAPI spec does
- * not describe /sql-editor/sqls/run at all). None is assumed or implemented:
- * positional rows therefore always raise ZetarisResponseShapeUnsupportedError
- * rather than being mapped by guessed column order. When a live response shows
- * a real metadata field, add it to `resolveColumnNames` (and a test) here.
+ * The commissioned hackathon API's HeaderRows schema documents `headers` as
+ * string column names accompanying positional `data`. This shape was observed
+ * on a real request on 2026-10-27. No other metadata aliases are assumed.
+ * Missing, ambiguous or inconsistent metadata still fails closed.
  */
 export type ZetarisResponseFamily =
   "OBJECT_ROWS" | "POSITIONAL_ROWS" | "EMPTY" | "MIXED_ROWS" | "UNRECOGNIZED";
@@ -28,8 +26,8 @@ export interface ZetarisResponseShape {
   firstRowWidth: number | null;
   /** Names of top-level response keys only (never values). */
   topLevelKeys: string[];
-  /** Always "NONE_RECOGNIZED" until a documented metadata shape exists. */
-  columnMetadata: "NONE_RECOGNIZED";
+  /** Identifies recognized metadata without logging column names or values. */
+  columnMetadata: "NONE_RECOGNIZED" | "HEADERS";
 }
 
 const SAFE_KEY = /^[A-Za-z0-9_.-]{1,40}$/;
@@ -45,7 +43,12 @@ export function classifyZetarisResponse(body: unknown): ZetarisResponseShape {
     : [];
   const data = isRecord(body) ? body.data : undefined;
   const dataType = data === null ? "null" : Array.isArray(data) ? "array" : typeof data;
-  const base = { dataType, topLevelKeys, columnMetadata: "NONE_RECOGNIZED" as const };
+  const base = {
+    dataType,
+    topLevelKeys,
+    columnMetadata:
+      resolveColumnNames(body) === null ? ("NONE_RECOGNIZED" as const) : ("HEADERS" as const),
+  };
 
   if (!Array.isArray(data)) {
     return { ...base, family: "UNRECOGNIZED", rowCount: null, firstRowWidth: null };
@@ -75,12 +78,21 @@ export function classifyZetarisResponse(body: unknown): ZetarisResponseShape {
 type ColumnMetadataReader = (body: Record<string, unknown>) => string[] | null;
 
 /**
- * Evidenced metadata shapes. EMPTY ON PURPOSE: no source available to this
- * repository documents a column-metadata field for /sql-editor/sqls/run, and
- * inventing one would risk mis-normalizing truth. Add a reader here (plus a
- * normalization test) only after a live response or official doc shows one.
+ * Evidence: the running sponsor API's /redoc/docs.yaml, HeaderRows schema,
+ * and a real POST /sql-editor/sqls/run response with headers:["one"] and a positional row.
+ * Reject duplicate names case-insensitively because truth row normalization
+ * resolves field names case-insensitively too.
  */
-const DOCUMENTED_COLUMN_METADATA_READERS: readonly ColumnMetadataReader[] = [];
+const DOCUMENTED_COLUMN_METADATA_READERS: readonly ColumnMetadataReader[] = [
+  (body) => {
+    const headers = body.headers;
+    if (!Array.isArray(headers) || headers.length === 0) return null;
+    if (!headers.every((h): h is string => typeof h === "string" && h.length > 0 && h === h.trim()))
+      return null;
+    if (new Set(headers.map((h) => h.toLowerCase())).size !== headers.length) return null;
+    return headers;
+  },
+];
 
 /** Names of the columns for positional rows, or null if no documented metadata identifies them. */
 export function resolveColumnNames(body: unknown): string[] | null {
