@@ -1,0 +1,42 @@
+
+> brindle@0.0.0 live:zetaris
+> tsx --env-file-if-exists=.env.local scripts/live/zetaris.mts
+
+================================================================
+LIVE :: Zetaris read-only truth probe
+================================================================
+REST host   : 127.0.0.1:8888
+org id      : 1
+schema      : brindle_truth
+
+supplier SUP-ATLAS: 4 normalized assertion(s)
+  supplier.legal_name = "Atlas Components"  valid 2025-01-15T00:00:00.000Z → open
+  supplier.enabled = true  valid 2025-01-15T00:00:00.000Z → open
+  supplier.approval_status = "APPROVED"  valid 2025-01-15T00:00:00.000Z → open
+  certification.ISO-9001 = {"certificationId":"CERT-ATLAS-9001","certificationType":"ISO-9001","status":"VALID"}  valid 2025-01-15T00:00:00.000Z → 2030-01-14T00:00:00.000Z
+
+supplier SUP-BOREAL: 4 normalized assertion(s)
+  supplier.legal_name = "Borealis Fasteners"  valid 2025-02-01T00:00:00.000Z → open
+  supplier.enabled = true  valid 2025-02-01T00:00:00.000Z → open
+  supplier.approval_status = "APPROVED"  valid 2025-02-01T00:00:00.000Z → open
+  certification.ISO-9001 = {"certificationId":"CERT-BOREAL-9001","certificationType":"ISO-9001","status":"VALID"}  valid 2025-02-01T00:00:00.000Z → 2030-01-31T00:00:00.000Z
+
+policy POL-PROC-001: 1 normalized assertion(s)
+  policy.procurement = {"policyVersion":"proc-policy-v1","requiredCertificationType":"ISO-9001","maxPoAmountCents":5000000,"currency":"USD"}  valid 2025-01-01T00:00:00.000Z → open
+
+HTTP calls and response-shape classification (secret-free; no row values):
+  POST /sql-editor/sqls/run HTTP 200  X-Request-ID 36267cc0-d3b5-4593-ac27-c19fbf1768a5  queryId 11f8f111-91be-4422-9c7e-6436b73d0e45  server-id 36267cc0-d3b5-4593-ac27-c19fbf1768a5
+    shape: family=POSITIONAL_ROWS data=array rows=1 first-row-width=6 top-level-keys=[data,headers,timeUsed,total] column-metadata=HEADERS
+  POST /sql-editor/sqls/run HTTP 200  X-Request-ID 108c694d-f274-4c1b-b318-6bff4a459397  queryId e4e558f6-0b7f-41a3-aea7-d3e8dd7e4c15  server-id 108c694d-f274-4c1b-b318-6bff4a459397
+    shape: family=POSITIONAL_ROWS data=array rows=1 first-row-width=5 top-level-keys=[data,headers,timeUsed,total] column-metadata=HEADERS
+  POST /sql-editor/sqls/run HTTP 200  X-Request-ID d6d07b94-11cf-4367-a2fe-ba19fa8fc7ab  queryId 8018d470-1981-4997-b943-a05801f406a6  server-id d6d07b94-11cf-4367-a2fe-ba19fa8fc7ab
+    shape: family=POSITIONAL_ROWS data=array rows=1 first-row-width=6 top-level-keys=[data,headers,timeUsed,total] column-metadata=HEADERS
+  POST /sql-editor/sqls/run HTTP 200  X-Request-ID 68c5f479-c0bf-47b7-a93c-4069e4499256  queryId 974b4a4e-a725-497c-ab66-82948b2b3183  server-id 68c5f479-c0bf-47b7-a93c-4069e4499256
+    shape: family=POSITIONAL_ROWS data=array rows=1 first-row-width=5 top-level-keys=[data,headers,timeUsed,total] column-metadata=HEADERS
+  POST /sql-editor/sqls/run HTTP 200  X-Request-ID a8bbe4c9-0b09-4f10-9ab2-5966d427bcc0  queryId 1379d79b-a7aa-48d6-95c5-76ef11696b7f  server-id a8bbe4c9-0b09-4f10-9ab2-5966d427bcc0
+    shape: family=POSITIONAL_ROWS data=array rows=1 first-row-width=6 top-level-keys=[data,headers,timeUsed,total] column-metadata=HEADERS
+
+This Zetaris environment returns POSITIONAL rows. Brindle cannot map them without documented column metadata:
+report the top-level keys above so the metadata field can be implemented in src/integrations/zetaris/response-shape.ts.
+
+RESULT: OK (live Zetaris read succeeded)

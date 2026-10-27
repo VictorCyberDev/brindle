@@ -1,10 +1,10 @@
 # M1 sponsor integration
 
-The canonical hackathon stack, and exactly how Brindle talks to each part. Nothing here has been exercised against a live sponsor service (no credentials were available): see [Live acceptance status](#live-acceptance-status).
+The canonical hackathon stack, and exactly how Brindle talks to each part. Zetaris reads were proven against the official sponsor runtime on 2026-10-27. Meterless/Nemotron and full M1 LIVE remain blocked: see [Live acceptance status](#live-acceptance-status).
 
 | Layer                        | Role                                                                        | Status in this repo                                                         |
 | ---------------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Zetaris**                  | Hackathon **local Docker truth plane** (governed, read-only)                | Adapter built to the Participant Setup Guide contract; protocol-tested only |
+| **Zetaris**                  | Hackathon **local Docker truth plane** (governed, read-only)                | LIVE PROVEN: official Docker runtime, five HTTP 200 reads, 4/4/1 assertions |
 | **Meterless Nightshift**     | **Primary competition AI runtime**                                          | First-class primary provider; protocol-tested only                          |
 | **NVIDIA**                   | Provider **configured inside Nightshift**; direct API is **secondary** only | Direct adapter exists as secondary; Nemotron-family model enforced          |
 | **Nemotron**                 | **Required** reasoning model behind the accepted LIVE demo                  | Not yet demonstrated live; acceptance requires proof (see below)            |
@@ -33,7 +33,7 @@ The query results are read from the response's **`data`**. The hackathon smoke e
 | `POSITIONAL_ROWS`             | `data: [["SUP-ATLAS", ...]]`, `data: [[1]]`              | Recognized as a legitimate family, but refused with `ZetarisResponseShapeUnsupportedError` unless reliable column metadata identifies the columns. Column order is **never guessed**. |
 | `MIXED_ROWS` / `UNRECOGNIZED` | objects and arrays mixed, `data` missing or not an array | Refused with the same error.                                                                                                                                                          |
 
-**Column metadata:** no metadata field for `/sql-editor/sqls/run` is documented in any source available to this repository (the generic Zetaris OpenAPI spec does not describe this endpoint), so none is assumed. `resolveColumnNames` is the single choke point where an evidenced metadata shape (and its test) must be added once a live response shows one. Until then positional rows fail loudly.
+**Column metadata:** the official runtime OpenAPI documents HeaderRows with headers:string[] and positional data. The actual API returned that shape. Brindle maps only nonempty, trimmed, case-insensitively unique header names with matching row widths. It never guesses column order. See [LIVE evidence](evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md).
 
 `ZetarisResponseShapeUnsupportedError` carries only safe shape facts: family, JS type of `data`, row count, first-row width and top-level key _names_; never row values, the body or credentials. `npm run live:zetaris` prints this classification for every call, so the first live run immediately shows what the real environment returns.
 
@@ -55,12 +55,9 @@ The smallest deterministic truth dataset is committed as CSV in `data/zetaris-se
 
 LIVE mode **never** reads the local fixture; there is no code path from LIVE to `MockFixtureTruthRowSource`.
 
-### Unverified Zetaris assumptions (settle with `npm run live:zetaris`)
+### Verified Zetaris environment
 
-- The exact response envelope beyond `data` (e.g. status/message fields) and whether `data` is always an array of column-keyed records.
-- Case and typing of returned column values (handled defensively, unobserved).
-- That `schema.table` is the correct qualified-name form in the SQL editor.
-- Whether the guide's `limit` has an upper bound below 100.
+The official participant runtime returned headers/data/total/timeUsed, accepted schema.table and the fixed read-only queries, and produced the expected normalized assertions. All nine official platform checks passed. The exact source CSVs were loaded with row counts 3/3/1. These observations apply to the recorded runtime version; unsupported shapes remain refused.
 
 ## Meterless Nightshift: primary competition AI runtime
 
@@ -101,9 +98,9 @@ The official Participant Setup Guide requires **at least one actual Meterless En
 
 ## Live acceptance status
 
-**LIVE ACCEPTANCE: BLOCKED** until the real sponsor environment is configured. No Zetaris Docker environment/key/org id and no Meterless Nightshift runtime token were available to the implementing session, so no real Zetaris request, no real Meterless/Nemotron call and no sponsor-backed end-to-end run were made. Everything is implemented against the published contracts and tested with clearly labelled protocol doubles that prove wire-format conformance only.
+**LIVE ACCEPTANCE: BLOCKED** on a supported, reachable Meterless Nightshift runtime with NVIDIA/Nemotron configured and request-level model attribution. Zetaris is now LIVE PROVEN; the local isolated PostgreSQL database has all five migrations. See [Zetaris acceptance](evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md) and [reasoning gate refusal](evidence/M1_NIGHTSHIFT_BLOCKER.txt). No full LIVE recovery or sponsor-backed receipt exists.
 
-Needed: a running Zetaris (REST URL, API key, org id, schema with the three seed tables); a Nightshift runtime (base URL, runtime token, a route id from `/v1/models`) with an NVIDIA provider configured to a Nemotron-backed lane; a reachable PostgreSQL `DATABASE_URL` with migrations applied (`npm run db:migrate`).
+Needed: METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN and a discovered route with a Nemotron-family provider behind it. The x86_64 Codespace does not meet the official DGX ARM64 installer requirement, and no supported remote runtime was available. Resume discovery and strict model proof before the full LIVE run.
 
 ## Exact live verification procedure
 
@@ -122,4 +119,4 @@ Evidence to capture (all secret-free): probe output; the `LIVE ::` banner on the
 
 M5 implements and exercises the documented local H-MEM spec engine with PostgreSQL persistence;
 see `M5_HMEM_RECOVERY_MEMORY.md`. That later implementation does not change this document's
-M1 LIVE status: real Zetaris/Nightshift/Nemotron acceptance remains deferred and mandatory.
+M1 LIVE status: Zetaris reads are proven; Nightshift/Nemotron and full LIVE acceptance remain mandatory.
