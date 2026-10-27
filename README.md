@@ -91,20 +91,16 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 ## For judges
 
 - **What is real:** the recovery engine (bitemporal truth, consequence graph, counterfactual
-  materiality, registry-bound recovery, fresh independent verification, Recovery Receipt), a
-  local H-MEM Recovery Memory engine, and real Zetaris sponsor-backed truth reads from the official
-  participant Docker runtime. The demo is a recording of one real engine run; a test re-runs the
-  engine and checks the recording still matches.
-- **What is mocked:** truth and reasoning in the deployed demo are MOCK. No sponsor service is called by the
+  materiality, registry-bound recovery, fresh independent verification, Recovery Receipt) and a
+  local H-MEM Recovery Memory engine. The demo is a recording of one real engine run; a test re-runs
+  the engine and checks the recording still matches.
+- **What is mocked:** truth and reasoning in the demo are MOCK. No sponsor service is called by the
   deployed demo.
-- **Sponsor LIVE status:** Zetaris LIVE acceptance is **PROVEN**. Meterless Nightshift → NVIDIA/Nemotron
-  LIVE acceptance remains **BLOCKED** and is not claimed. See
-  [docs/evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md](docs/evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md),
-  [docs/M1_SPONSOR_INTEGRATION.md](docs/M1_SPONSOR_INTEGRATION.md) and
+- **Sponsor LIVE status:** M1 LIVE sponsor acceptance (Zetaris, Meterless Nightshift) is **BLOCKED**
+  and is not claimed. See [docs/M1_SPONSOR_INTEGRATION.md](docs/M1_SPONSOR_INTEGRATION.md) and
   [docs/submission/SPONSOR_PROOF_CHECKLIST.md](docs/submission/SPONSOR_PROOF_CHECKLIST.md).
 - **Evidence:** [docs/M6_ABLATION.md](docs/M6_ABLATION.md), [docs/evidence/M6_EVAL_RESULTS.json](docs/evidence/M6_EVAL_RESULTS.json),
-  [docs/M5_HMEM_RECOVERY_MEMORY.md](docs/M5_HMEM_RECOVERY_MEMORY.md), and
-  [docs/evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md](docs/evidence/M1_ZETARIS_LIVE_ACCEPTANCE.md).
+  [docs/M5_HMEM_RECOVERY_MEMORY.md](docs/M5_HMEM_RECOVERY_MEMORY.md).
 - **Submission package:** [docs/submission](docs/submission) (demo script, shot list, deck outline, copy, sponsor checklist).
 
 ## For investors
