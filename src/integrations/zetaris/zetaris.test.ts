@@ -223,16 +223,55 @@ describe("Zetaris response families (data may be object rows or positional rows)
     expect(classifyZetarisResponse([]).family).toBe("UNRECOGNIZED");
   });
 
-  it("3. no column-metadata shape is documented, so none is recognized (positional rows are never mapped by guessed order)", () => {
-    // If a documented metadata field is ever added to resolveColumnNames, extend this test with a normalization case.
+  it("3. undocumented metadata aliases are not used to guess column order", () => {
     for (const metadata of [
       { columns: ["supplier_id"] },
       { schema: [{ name: "supplier_id" }] },
       { meta: ["supplier_id"] },
       { fields: ["supplier_id"] },
-      { headers: ["supplier_id"] },
     ]) {
       expect(resolveColumnNames({ data: [["SUP-ATLAS"]], ...metadata })).toBeNull();
+    }
+  });
+
+  it("maps positional rows using the live HeaderRows contract and reports its metadata source", async () => {
+    const body = {
+      headers: ["legal_name", "supplier_id"],
+      data: [["Atlas Components", "SUP-ATLAS"]],
+      total: 1,
+      timeUsed: 8,
+    };
+    expect(await run(body)).toEqual([{ legal_name: "Atlas Components", supplier_id: "SUP-ATLAS" }]);
+    expect(classifyZetarisResponse(body)).toMatchObject({
+      family: "POSITIONAL_ROWS",
+      columnMetadata: "HEADERS",
+      firstRowWidth: 2,
+    });
+    expect(await run({ headers: ["one"], data: [["1"]], total: 1, timeUsed: 3 })).toEqual([
+      { one: "1" },
+    ]);
+  });
+
+  it("rejects malformed or ambiguous headers and inconsistent row widths", async () => {
+    for (const headers of [
+      [],
+      [""],
+      [" supplier_id"],
+      ["supplier_id "],
+      [null],
+      [1],
+      ["supplier_id", "supplier_id"],
+      ["supplier_id", "SUPPLIER_ID"],
+    ]) {
+      expect(resolveColumnNames({ headers })).toBeNull();
+      await expect(run({ headers, data: [["SUP-ATLAS"]] })).rejects.toBeInstanceOf(
+        ZetarisResponseShapeUnsupportedError,
+      );
+    }
+    for (const data of [[["SUP-ATLAS", "extra"]], [["SUP-ATLAS"], []]]) {
+      await expect(run({ headers: ["supplier_id"], data })).rejects.toBeInstanceOf(
+        ZetarisResponseShapeUnsupportedError,
+      );
     }
   });
 

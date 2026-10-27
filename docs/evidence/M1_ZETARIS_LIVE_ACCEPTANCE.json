@@ -1,0 +1,78 @@
+{
+  "timestamp": "2026-10-27T22:50:44Z",
+  "testedSha": "e08896e8ed5bd9002fdb2bfd803b9eb578fbb695",
+  "environment": "GitHub Codespaces x86_64; official Zetaris participant Docker distribution; private local PostgreSQL brindle_m1; five migrations applied",
+  "sourceId": "zetaris",
+  "schema": "brindle_truth",
+  "tableRowCounts": {
+    "supplier_master": 3,
+    "supplier_certifications": 3,
+    "procurement_policy": 1
+  },
+  "assertionCounts": {
+    "SUP-ATLAS": 4,
+    "SUP-BOREAL": 4,
+    "POL-PROC-001": 1
+  },
+  "httpCalls": [
+    {
+      "httpStatus": 200,
+      "requestId": "36267cc0-d3b5-4593-ac27-c19fbf1768a5",
+      "queryId": "11f8f111-91be-4422-9c7e-6436b73d0e45",
+      "serverRequestId": "36267cc0-d3b5-4593-ac27-c19fbf1768a5"
+    },
+    {
+      "httpStatus": 200,
+      "requestId": "108c694d-f274-4c1b-b318-6bff4a459397",
+      "queryId": "e4e558f6-0b7f-41a3-aea7-d3e8dd7e4c15",
+      "serverRequestId": "108c694d-f274-4c1b-b318-6bff4a459397"
+    },
+    {
+      "httpStatus": 200,
+      "requestId": "d6d07b94-11cf-4367-a2fe-ba19fa8fc7ab",
+      "queryId": "8018d470-1981-4997-b943-a05801f406a6",
+      "serverRequestId": "d6d07b94-11cf-4367-a2fe-ba19fa8fc7ab"
+    },
+    {
+      "httpStatus": 200,
+      "requestId": "68c5f479-c0bf-47b7-a93c-4069e4499256",
+      "queryId": "974b4a4e-a725-497c-ab66-82948b2b3183",
+      "serverRequestId": "68c5f479-c0bf-47b7-a93c-4069e4499256"
+    },
+    {
+      "httpStatus": 200,
+      "requestId": "a8bbe4c9-0b09-4f10-9ab2-5966d427bcc0",
+      "queryId": "1379d79b-a7aa-48d6-95c5-76ef11696b7f",
+      "serverRequestId": "a8bbe4c9-0b09-4f10-9ab2-5966d427bcc0"
+    }
+  ],
+  "responseShape": {
+    "family": "POSITIONAL_ROWS",
+    "columnMetadata": "HEADERS",
+    "topLevelKeys": ["data", "headers", "timeUsed", "total"]
+  },
+  "zetarisProbe": "PASS",
+  "officialPlatformChecks": "9/9 PASS",
+  "packageSha256": "14c6a811a140378bec1749ceffd7fa123bafb2f178545b26354e8f9433b413d3",
+  "openapiSha256": "f4204e2b199b5f22e63aaff9604f8ecacce9c820fbde4424a3f3022690c57ff6",
+  "regressions": {
+    "ciRun": 40596826409,
+    "verify": "PASS",
+    "e2e": "PASS",
+    "unitIntegrationTests": 255,
+    "m6Scenarios": "8/8 PASS"
+  },
+  "nightshift": "UNPROVEN; no accessible supported runtime/token",
+  "runtimeRoute": null,
+  "underlyingModel": null,
+  "nemotronProbe": {
+    "exitCode": 3,
+    "result": "REFUSED: no reasoning runtime configured"
+  },
+  "fullLive": {
+    "exitCode": 2,
+    "result": "REFUSED: required Meterless configuration absent"
+  },
+  "liveReceipts": [],
+  "overallM1Live": "BLOCKED"
+}

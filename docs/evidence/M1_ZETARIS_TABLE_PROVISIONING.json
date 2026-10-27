@@ -1,0 +1,101 @@
+{
+  "timestamp": "2026-10-27T22:39:16.387155+00:00",
+  "gitSha": "08c2b726aa31aba2b8bf83ca8ae99f9775dd12e3",
+  "schema": "brindle_truth",
+  "calls": [
+    {
+      "sql": "SHOW LIGHTNING DATABASES",
+      "requestId": "82f60f98-df53-42e1-a35c-69518f55f728",
+      "queryId": "a995e6c1-30fd-4c85-b618-9b960ddd7481",
+      "httpStatus": 200,
+      "headers": ["name", "description", "id"],
+      "rowCount": 1
+    },
+    {
+      "sql": "CREATE LIGHTNING DATABASE brindle_truth DESCRIBE BY \"Brindle committed truth datasets\"",
+      "requestId": "90ab4156-57f7-4454-95b2-56cf65d6322a",
+      "queryId": "2c5ba9c3-06f0-4bb5-9f80-491aeccacbb6",
+      "httpStatus": 200,
+      "headers": ["Result"],
+      "rowCount": 0
+    },
+    {
+      "sql": "SHOW LIGHTNING TABLES brindle_truth",
+      "requestId": "d95bf084-4d75-4757-9e8c-d386bf5afdd6",
+      "queryId": "291c46ad-e5e6-4819-8340-893c599e3275",
+      "httpStatus": 200,
+      "headers": ["name", "materialized_table", "source_table", "table_type", "format", "id"],
+      "rowCount": 0
+    },
+    {
+      "sql": "CREATE LIGHTNING FILESTORE TABLE supplier_master FROM brindle_truth FORMAT CSV OPTIONS (path \"/home/zetaris/customer-data/shared/brindle_truth/supplier_master.csv\", header \"true\", inferSchema \"true\")",
+      "requestId": "79eea396-a00e-4e2b-a59f-fe5c9a534fa5",
+      "queryId": "704f5e96-b4b5-4f70-9a5f-f0f5fef8bc10",
+      "httpStatus": 200,
+      "headers": ["Result"],
+      "rowCount": 0
+    },
+    {
+      "sql": "SELECT count(*) AS row_count FROM brindle_truth.supplier_master",
+      "requestId": "7f238554-5a43-4a4e-9242-2f3f7bc40a0d",
+      "queryId": "2c6a7738-818b-48be-8bab-5b06cbdadd8e",
+      "httpStatus": 200,
+      "headers": ["row_count"],
+      "rowCount": 1
+    },
+    {
+      "sql": "CREATE LIGHTNING FILESTORE TABLE supplier_certifications FROM brindle_truth FORMAT CSV OPTIONS (path \"/home/zetaris/customer-data/shared/brindle_truth/supplier_certifications.csv\", header \"true\", inferSchema \"true\")",
+      "requestId": "06a4b27a-9ecd-4a7f-84ae-373149ce4076",
+      "queryId": "5125d99a-4979-4802-9bd1-37115a541c8e",
+      "httpStatus": 200,
+      "headers": ["Result"],
+      "rowCount": 0
+    },
+    {
+      "sql": "SELECT count(*) AS row_count FROM brindle_truth.supplier_certifications",
+      "requestId": "db29d467-ebae-4b91-af8f-52a395f09a64",
+      "queryId": "deff2d00-9367-4700-8003-6c3a278d9954",
+      "httpStatus": 200,
+      "headers": ["row_count"],
+      "rowCount": 1
+    },
+    {
+      "sql": "CREATE LIGHTNING FILESTORE TABLE procurement_policy FROM brindle_truth FORMAT CSV OPTIONS (path \"/home/zetaris/customer-data/shared/brindle_truth/procurement_policy.csv\", header \"true\", inferSchema \"true\")",
+      "requestId": "45f22b7e-2d72-4829-baa7-2bf8d9fcb4ce",
+      "queryId": "7dd1b771-2286-4df5-b31b-c4b3c1ef8f04",
+      "httpStatus": 200,
+      "headers": ["Result"],
+      "rowCount": 0
+    },
+    {
+      "sql": "SELECT count(*) AS row_count FROM brindle_truth.procurement_policy",
+      "requestId": "f3580867-14f0-4fde-8523-617429f90616",
+      "queryId": "a52a9bf1-2986-4719-9941-453fa610b07e",
+      "httpStatus": 200,
+      "headers": ["row_count"],
+      "rowCount": 1
+    },
+    {
+      "sql": "SELECT supplier_id FROM brindle_truth.supplier_master WHERE supplier_id IN ('SUP-ATLAS','SUP-BOREAL')",
+      "requestId": "b752f057-6e6a-4efd-ae37-672ec4959fbb",
+      "queryId": "c615b995-7e4a-42b5-8b0d-3d7722469010",
+      "httpStatus": 200,
+      "headers": ["supplier_id"],
+      "rowCount": 2
+    },
+    {
+      "sql": "SELECT policy_id FROM brindle_truth.procurement_policy WHERE policy_id = 'POL-PROC-001'",
+      "requestId": "f8f251e3-86cf-42e8-8153-9bea483916c3",
+      "queryId": "303f3eb4-8728-489b-9d40-d05e381f7ed5",
+      "httpStatus": 200,
+      "headers": ["policy_id"],
+      "rowCount": 1
+    }
+  ],
+  "datasetCounts": {
+    "supplier_master": 3,
+    "supplier_certifications": 3,
+    "procurement_policy": 1
+  },
+  "representatives": ["SUP-ATLAS", "SUP-BOREAL", "POL-PROC-001"]
+}

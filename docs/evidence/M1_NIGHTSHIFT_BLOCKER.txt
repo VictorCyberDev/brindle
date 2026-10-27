@@ -1,0 +1,19 @@
+npm run live:nemotron: exit 3
+
+> brindle@0.0.0 live:nemotron
+> tsx --env-file-if-exists=.env.local scripts/live/nemotron.mts
+
+REFUSING TO RUN: No reasoning runtime configured. Primary: METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN, METERLESS_MODEL. Secondary (direct NVIDIA): NEMOTRON_PROVIDER=nvidia, NVIDIA_API_KEY, NEMOTRON_MODEL_ID.
+
+BRINDLE_RUNTIME_MODE=live npm run live: exit 2
+
+> brindle@0.0.0 live
+> tsx --env-file-if-exists=.env.local scripts/live/all.mts
+
+
+>>> live:zetaris
+Invalid Brindle configuration:
+  - METERLESS_BASE_URL, METERLESS_RUNTIME_TOKEN and METERLESS_MODEL are required when BRINDLE_RUNTIME_MODE=live (Meterless Nightshift is the primary runtime)
+See .env.example. Use BRINDLE_RUNTIME_MODE=local to run without sponsor credentials.
+
+"live:zetaris" did not succeed (exit 2). Stopping.
